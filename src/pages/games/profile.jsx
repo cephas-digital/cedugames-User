@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import ProfileHeader from "../../assets/profileIcon.png";
 import profile from "../../assets/profile.png";
 import Navbar from "../../components/homeNavbar";
@@ -125,6 +126,15 @@ export default function Profile() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="mt-8 sm:mt-10 flex justify-center sm:justify-end border-t border-gray-100 pt-6">
+            <Link
+              to="/login"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 px-8 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2"
+            >
+              Log out
+            </Link>
           </div>
         </div>
       </div>
