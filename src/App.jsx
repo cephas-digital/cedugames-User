@@ -1,5 +1,8 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { isSignedIn } from "./services/api";
+
+const ProtectedRoute = ({ children }) => isSignedIn() ? children : <Navigate to="/login" replace />;
 
 const Background = lazy(() => import("./pages/background"));
 const Login = lazy(() => import("./pages/auth/login"));
@@ -38,22 +41,22 @@ function App() {
 
           <Route
             path="/age-selection"
-            element={<AgeSelection />}
+            element={<ProtectedRoute><AgeSelection /></ProtectedRoute>}
           />
 
           <Route
             path="/age-selection/little-explore"
-            element={<LittleExplorer />}
+            element={<ProtectedRoute><LittleExplorer /></ProtectedRoute>}
           />
 
           <Route
             path="/age-selection/little-explore/math"
-            element={<Home />}
+            element={<ProtectedRoute><Home /></ProtectedRoute>}
           />
 
           <Route
             path="/age-selection/little-explore/english"
-            element={<Home />}
+            element={<ProtectedRoute><Home /></ProtectedRoute>}
           />
 
           <Route
@@ -68,7 +71,7 @@ function App() {
 
           <Route
             path="/quiz"
-            element={<Quiz />}
+            element={<ProtectedRoute><Quiz /></ProtectedRoute>}
           />
 
           <Route
@@ -78,22 +81,22 @@ function App() {
 
           <Route
             path="/leaderboard"
-            element={<LeaderBoard />}
+            element={<ProtectedRoute><LeaderBoard /></ProtectedRoute>}
           />
 
           <Route
             path="/profile"
-            element={<Profile />}
+            element={<ProtectedRoute><Profile /></ProtectedRoute>}
           />
 
           <Route
             path="/shop"
-            element={<Shop />}
+            element={<ProtectedRoute><Shop /></ProtectedRoute>}
           />
 
           <Route
             path="/notification"
-            element={<Notifications />}
+            element={<ProtectedRoute><Notifications /></ProtectedRoute>}
           />
           <Route path="*" element={<NotFound />} />
         </Routes>
