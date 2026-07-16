@@ -96,9 +96,9 @@ const Home = () => {
         onClick={toggleSound}
         aria-pressed={soundOn}
         aria-label={soundOn ? "Turn background music off" : "Turn background music on"}
-        className="absolute right-3 top-32 sm:right-6 lg:top-24 z-20 rounded-full bg-black/35 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur-sm transition hover:scale-105 hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white"
+        className="absolute right-3 top-32 sm:right-6 lg:top-24 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-lg text-white shadow-lg backdrop-blur-sm transition hover:scale-105 hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white"
       >
-        {soundOn ? "ðŸ”Š Music on" : "ðŸ”‡ Music off"}
+        <span aria-hidden="true">{soundOn ? "ðŸ”Š" : "ðŸ”‡"}</span>
       </button>
 
       <div className="flex-1 flex flex-col justify-end items-center px-4 pt-20 sm:pt-40">
