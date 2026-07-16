@@ -16,6 +16,37 @@ body {
 #root { min-height: 100vh; width: 100%; }
 img, svg { max-width: 100%; }
 
+.home-start-button {
+  animation: home-button-pulse 2s ease-in-out infinite;
+}
+
+.home-sparkle {
+  position: absolute;
+  color: rgba(255, 244, 125, 0.9);
+  filter: drop-shadow(0 0 8px rgba(255, 235, 80, 0.8));
+  animation: home-float 4s ease-in-out infinite;
+}
+
+.home-sparkle-one { left: 8%; top: 28%; font-size: 2rem; }
+.home-sparkle-two { right: 12%; top: 35%; font-size: 2.75rem; animation-delay: -1s; }
+.home-sparkle-three { left: 22%; top: 60%; font-size: 1.5rem; animation-delay: -2s; }
+.home-sparkle-four { right: 25%; top: 66%; font-size: 2rem; animation-delay: -3s; }
+
+@keyframes home-float {
+  0%, 100% { transform: translateY(0) rotate(-8deg) scale(1); opacity: 0.55; }
+  50% { transform: translateY(-22px) rotate(8deg) scale(1.18); opacity: 1; }
+}
+
+@keyframes home-button-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 10px 25px rgba(112, 45, 190, 0.35); }
+  50% { transform: scale(1.045); box-shadow: 0 15px 35px rgba(255, 95, 210, 0.55); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-start-button,
+  .home-sparkle { animation: none; }
+}
+
 .app-loading,
 .app-error {
   min-height: 100vh;
