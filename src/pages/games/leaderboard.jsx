@@ -42,8 +42,8 @@ export default function Leaderboard() {
   return (
     <div>
       <Navbar />
-      <div className="min-h-screen bg-gray-200 flex items-center justify-center p-6">
-        <div className="w-full max-w-7xl bg-white rounded-2xl p-8 shadow-sm">
+      <div className="min-h-screen bg-gray-200 flex items-center justify-center p-3 sm:p-6">
+        <div className="w-full min-w-0 max-w-7xl bg-white rounded-2xl p-4 sm:p-8 shadow-sm">
           <div className="flex justify-center mb-8">
             <img
               src={LeaderboardIcon}
@@ -92,9 +92,9 @@ export default function Leaderboard() {
             {users.map((user) => (
               <div
                 key={user.id}
-                className={`flex items-center justify-between p-4 rounded-xl ${user.bg}`}
+                className={`flex min-w-0 items-center justify-between gap-3 p-3 sm:p-4 rounded-xl ${user.bg}`}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex min-w-0 items-center gap-2 sm:gap-4">
                   <div
                     className={`w-8 h-8 flex items-center justify-center rounded-full text-white text-sm font-semibold ${user.badge}`}
                   >
@@ -106,13 +106,13 @@ export default function Leaderboard() {
                     className="w-12 h-12 rounded-full object-cover"
                   />
 
-                  <div>
-                    <p className="text-sm font-semibold">{user.name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{user.name}</p>
                     <p className="text-xs text-gray-500">Level {user.level}</p>
                   </div>
                 </div>
 
-                <div className="text-right">
+                <div className="shrink-0 text-right">
                   <p className="text-sm font-semibold">{user.points}</p>
                   <p className="text-xs text-gray-500">points</p>
                 </div>
@@ -121,10 +121,10 @@ export default function Leaderboard() {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between mt-6 text-sm text-gray-500">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 text-sm text-gray-500">
             <p>Showing 1-8 of 72 users</p>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap justify-center items-center gap-2">
               <button className="px-3 py-1 border rounded-md">Previous</button>
               <button className="px-3 py-1 bg-purple-500 text-white rounded-md">
                 1

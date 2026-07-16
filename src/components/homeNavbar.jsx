@@ -24,7 +24,7 @@ export default function Navbar() {
 
   return (
     <div
-      className={`w-full ${bgClass} px-8 py-3 shadow-xl   flex items-center justify-between rounded-xl`}
+      className={`w-full ${bgClass} px-4 sm:px-6 lg:px-8 py-3 shadow-xl flex flex-wrap lg:flex-nowrap items-center justify-between gap-3 rounded-none sm:rounded-xl`}
     >
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-500 text-white">
@@ -46,7 +46,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      <div className={`flex items-center gap-10 ${textColor} font-medium`}>
+      <nav className={`order-3 lg:order-none flex w-full lg:w-auto items-center justify-between sm:justify-center gap-2 sm:gap-8 lg:gap-10 border-t border-current/10 pt-3 lg:border-0 lg:pt-0 ${textColor} font-medium`}>
         {navItems.map((item) => (
           <NavItem
             key={item.label}
@@ -57,9 +57,9 @@ export default function Navbar() {
             activeColor={textColor}
           />
         ))}
-      </div>
+      </nav>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 [&>div:nth-child(1)]:hidden sm:[&>div:nth-child(1)]:flex [&>div:nth-child(2)]:hidden min-[480px]:[&>div:nth-child(2)]:flex">
         <Badge>❤️ ❤️ ❤️</Badge>
 
         <Badge>🪙 100</Badge>
@@ -71,7 +71,7 @@ export default function Navbar() {
           🔔
         </div>
 
-        <button className="px-5 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium shadow-md hover:opacity-90">
+        <button className="hidden md:block px-5 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium shadow-md hover:opacity-90">
           Settings
         </button>
       </div>
