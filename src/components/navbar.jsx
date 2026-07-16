@@ -2,7 +2,7 @@ import logo from "../assets/logo.png";
 
 function Navbar() {
   return (
-    <div className="w-full flex justify-between items-center px-10 py-4 bg-white shadow-sm">
+    <div className="w-full flex justify-between items-center px-4 sm:px-10 py-3 sm:py-4 bg-white shadow-sm">
       <h1 className="text-xl font-bold text-purple-600 leading-tight">
         <img
           src={logo}

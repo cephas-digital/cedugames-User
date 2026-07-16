@@ -14,7 +14,7 @@ function AgeSelection() {
     <div className="min-h-screen bg-gray-100">
       <Navbar />
 
-      <div className="px-10 py-8 space-y-10">
+      <div className="px-3 sm:px-6 lg:px-10 py-4 sm:py-8 space-y-6 sm:space-y-10">
         <WelcomeCard
           image={welcome}
           text="  Welcome to CeduGames, Pick your
@@ -22,8 +22,8 @@ function AgeSelection() {
         fun challenges that help you learn, think, and play smarter!"
         />
 
-        <div className="bg-white p-8 rounded-2xl shadow-sm">
-          <h2 className="text-gray-700 text-2xl mb-6">Select your age group</h2>
+        <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-sm">
+          <h2 className="text-gray-700 text-xl sm:text-2xl mb-6">Select your age group</h2>
 
           <div className="grid md:grid-cols-3 py-4  gap-6">
             <AgeCard

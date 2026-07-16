@@ -24,7 +24,7 @@ function OTPInput({ otp, setOtp }) {
   };
 
   return (
-    <div className="flex justify-center gap-3 mt-6">
+    <div className="grid grid-cols-6 gap-1.5 sm:gap-3 mt-6">
       {otp.map((digit, index) => (
         <input
           key={index}
@@ -33,7 +33,7 @@ function OTPInput({ otp, setOtp }) {
           maxLength={1}
           onChange={(e) => handleChange(e.target.value, index)}
           onKeyDown={(e) => handleKeyDown(e, index)}
-          className="w-12 h-12 text-center text-lg rounded-lg
+          className="w-full min-w-0 h-11 sm:h-12 text-center text-lg rounded-lg
           bg-gray-100 focus:outline-none focus:ring-2
           focus:ring-purple-400"
         />

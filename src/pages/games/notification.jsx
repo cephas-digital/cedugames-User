@@ -1,6 +1,5 @@
 import React from "react";
 import Navbar from "../../components/homeNavbar";
-import HeaderImg from "../../assets/coin-header.png";
 import NotificationHeader from "../../assets/notificationIcon.png";
 
 export default function Notification() {
@@ -34,8 +33,8 @@ export default function Notification() {
     <div>
       <Navbar />
 
-      <div className="min-h-screen bg-[#F7F6F8] flex items-center justify-center p-6">
-        <div className="w-full max-w-7xl bg-white rounded-2xl p-10 shadow-sm">
+      <div className="min-h-screen bg-[#F7F6F8] flex items-center justify-center p-3 sm:p-6">
+        <div className="w-full min-w-0 max-w-7xl bg-white rounded-2xl p-4 sm:p-10 shadow-sm">
           <div className="flex justify-center mb-10">
             <div className="relative">
               <img
@@ -55,7 +54,7 @@ export default function Notification() {
                   {section.items.map((item, index) => (
                     <div
                       key={index}
-                      className="bg-gray-50 rounded-xl p-5 shadow-sm border border-gray-100"
+                      className="bg-gray-50 rounded-xl p-4 sm:p-5 shadow-sm border border-gray-100 break-words"
                     >
                       <p className="text-sm text-black leading-relaxed">
                         {item.message}
@@ -72,10 +71,10 @@ export default function Notification() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between mt-12 text-sm text-black">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-12 text-sm text-black">
             <p>Showing 1-8 of 72 users</p>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap justify-center items-center gap-2">
               <button className="px-3 py-1 border rounded-md">Previous</button>
 
               <button className="px-3 py-1 bg-purple-500 text-white rounded-md">

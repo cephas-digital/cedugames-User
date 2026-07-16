@@ -10,15 +10,15 @@ import { GoogleButton } from "../../components/button";
 const Signup = () => {
   return (
     <div
-      className="min-h-250 font-Nunito flex items-center justify-center bg-gray-100"
+      className="min-h-screen font-Nunito flex items-center justify-center bg-gray-100 p-4 sm:p-6"
       style={{
         backgroundImage: `url(${Bt})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
     >
-      <div className=" lg:flex md:flex grid">
-        <div className=" bg-[#BF5AF2] rounded-bl-2xl rounded-tl-2xl w-100 p-4 grid justify-center items-center">
+      <div className="w-full max-w-5xl grid md:grid-cols-[minmax(0,25rem)_minmax(0,1fr)]">
+        <div className="bg-[#BF5AF2] rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none w-full p-5 sm:p-8 grid justify-center items-center">
           <div>
             <Text
               className="text-white font-medium  "
@@ -133,7 +133,7 @@ const Signup = () => {
           </Link>
         </div> */}
 
-        <div className="flex items-center rounded-tr-2xl rounded-br-2xl justify-center bg-gray-50 p-20 px-8">
+        <div className="flex items-center rounded-b-2xl md:rounded-r-2xl md:rounded-bl-none justify-center bg-gray-50 p-5 sm:p-8 md:py-12">
           <div className="w-full max-w-md">
             <h2 className="text-2xl font-semibold mb-2">
               Create an account to get started
@@ -143,7 +143,7 @@ const Signup = () => {
               Fill in your details to join the community.
             </p>
 
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <Input
                 label="Email"
                 placeholder="example@mail.com"

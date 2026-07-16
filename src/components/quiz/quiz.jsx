@@ -52,7 +52,7 @@ export default function Quiz() {
 
   return (
     <div
-      className="min-h-screen flex flex-col text-white"
+      className="min-h-screen w-full overflow-x-hidden flex flex-col text-white"
       style={{
         backgroundImage: `url(${BG})`,
         backgroundSize: "cover",
@@ -61,13 +61,15 @@ export default function Quiz() {
     >
       <Navbar />
 
-      <QuestionCard question={question} />
+      <main className="w-full flex-1 px-3 sm:px-6 pb-8">
+        <QuestionCard question={question} />
 
-      <OptionsGrid
-        options={question.options}
-        onSelect={handleSelectAnswer}
-        selectedOption={selectedOption}
-      />
+        <OptionsGrid
+          options={question.options}
+          onSelect={handleSelectAnswer}
+          selectedOption={selectedOption}
+        />
+      </main>
 
       {showModal && (
         <ResultModal

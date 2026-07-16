@@ -31,8 +31,8 @@ export default function Profile() {
     <div>
       <Navbar />
 
-      <div className="min-h-screen bg-gray-200 flex items-center justify-center p-6">
-        <div className="w-full max-w-7xl bg-white rounded-2xl p-10 shadow-sm">
+      <div className="min-h-screen bg-gray-200 flex items-center justify-center p-3 sm:p-6">
+        <div className="w-full min-w-0 max-w-7xl bg-white rounded-2xl p-4 sm:p-10 shadow-sm">
           <div className="flex justify-center mb-10">
             <div className="relative">
               <img
@@ -61,7 +61,7 @@ export default function Profile() {
           </div>
 
           <div className="flex justify-center gap-6 mb-10 flex-wrap">
-            <div className="bg-purple-100 rounded-xl px-10 py-4 flex items-center gap-3">
+            <div className="w-full sm:w-auto bg-purple-100 rounded-xl px-5 sm:px-10 py-4 flex items-center gap-3">
               <div className=" w-full bg-white p-4 rounded-full flex items-center justify-center">
                 <img
                   src={Trophy}
@@ -75,7 +75,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="bg-yellow-100 rounded-xl px-10 py-2 flex items-center gap-3">
+            <div className="w-full sm:w-auto bg-yellow-100 rounded-xl px-5 sm:px-10 py-3 flex items-center gap-3">
               <div className=" w-full bg-white p-4 rounded-full flex items-center justify-center">
                 <img
                   src={Coin}
@@ -89,7 +89,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="bg-blue-100 rounded-xl px-10 py-2 flex items-center gap-3">
+            <div className="w-full sm:w-auto bg-blue-100 rounded-xl px-5 sm:px-10 py-3 flex items-center gap-3">
               <div className=" w-full bg-white p-4 rounded-full flex items-center justify-center">
                 <img
                   src={Badge}
@@ -107,7 +107,7 @@ export default function Profile() {
           <div>
             <p className="text-base text-black mb-4">Badge Collection</p>
 
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
+            <div className="grid grid-cols-3 min-[400px]:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-4">
               {badges.map((badge) => (
                 <div
                   key={badge.id}

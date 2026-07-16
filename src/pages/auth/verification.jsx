@@ -17,7 +17,7 @@ function VerifyCard() {
 
   return (
     <div
-      className="h-screen font-Nunito flex items-center justify-center bg-gray-100"
+      className="min-h-screen font-Nunito flex items-center justify-center bg-gray-100 p-4"
       style={{
         backgroundImage: `url(${Bt})`,
         backgroundSize: "cover",
@@ -33,7 +33,7 @@ function VerifyCard() {
               className=" w-20"
             />
           </div>
-          <h1 className="text-[32px] font-bold">Verify OTP</h1>
+          <h1 className="text-2xl sm:text-[32px] font-bold">Verify OTP</h1>
           <p className="text-gray-500 text-sm mt-2">
             Enter the 6-digit code sent to your email to continue.
           </p>

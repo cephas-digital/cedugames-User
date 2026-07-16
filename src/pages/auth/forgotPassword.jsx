@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 function ForgotPassword() {
   return (
     <div
-      className="h-screen font-Nunito flex items-center justify-center bg-gray-100"
+      className="min-h-screen font-Nunito flex items-center justify-center bg-gray-100 p-4"
       style={{
         backgroundImage: `url(${Bt})`,
         backgroundSize: "cover",
@@ -25,7 +25,7 @@ function ForgotPassword() {
               alt=""
             />
           </div>
-          <h1 className="text-[32px] text-[#281B22] font-bold">
+          <h1 className="text-2xl sm:text-[32px] text-[#281B22] font-bold">
             Forgot Password
           </h1>
 

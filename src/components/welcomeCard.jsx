@@ -1,10 +1,10 @@
 function WelcomeCard({ image, text, header }) {
   return (
-    <div className="bg-white rounded-2xl shadow-md p-6 lg:flex md:flex grid items-center gap-4 lg:max-w-200 mx-auto border border-purple-100">
+    <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6 md:flex grid items-center gap-4 lg:max-w-200 mx-auto border border-purple-100">
       <img
         src={image}
         alt="welcome"
-        className="w-80"
+        className="w-full max-w-80 mx-auto"
       />
 
       <div>
@@ -12,7 +12,7 @@ function WelcomeCard({ image, text, header }) {
           {" "}
           {header}{" "}
         </h1>
-        <p className="text-gray-600 text-xl leading-relaxed">{text}</p>
+        <p className="text-gray-600 text-base sm:text-xl leading-relaxed">{text}</p>
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ function AgeCard({
   return (
     <Link to={link}>
       <div
-        className={`p-10 h-auto ${color} ${className}  lg:flex md:flex grid gap-4 transition hover:scale-105 cursor-pointer `}
+        className={`p-4 sm:p-6 lg:p-10 h-auto ${color} ${className} md:flex grid gap-4 transition md:hover:scale-105 cursor-pointer`}
         style={{
           backgroundImage: `url(${bgImage})`,
           backgroundSize: "cover",
@@ -24,7 +24,7 @@ function AgeCard({
         <img
           src={image}
           alt="age group"
-          className="w-40"
+          className="w-32 sm:w-40 max-w-full mx-auto"
         />
 
         <div>

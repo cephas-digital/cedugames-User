@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 function ResetPassword() {
   return (
     <div
-      className="h-screen font-Nunito flex items-center justify-center bg-gray-100"
+      className="min-h-screen font-Nunito flex items-center justify-center bg-gray-100 p-4"
       style={{
         backgroundImage: `url(${Bt})`,
         backgroundSize: "cover",
