@@ -12,12 +12,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
-
-  fontFamily: {
-    Nunito: ["Nunito Sans", "sans-serif"],
-    Kumbh: ["Kumbh Sans", "sans-serif"],
-    Outfit: ["Outfit", "sans-serif"],
-    Poppins: ["Poppins", "sans-serif"],
-    Lato: ["Lato", "sans-serif"],
+  build: {
+    sourcemap: false,
   },
 });

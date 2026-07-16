@@ -1,11 +1,9 @@
 import { useState } from "react";
-import QUESTIONS from "../../questiions";
 import Navbar from "../homeNavbar";
 import Questions from "../../question";
 import BG from "../../assets/BG.png";
 import OptionsGrid from "./optionGrid";
 import QuestionCard from "./questionCard";
-import ResultScreen from "./resultScreen";
 import ResultModal from "./resultModal";
 
 export default function Quiz() {
@@ -34,6 +32,7 @@ export default function Quiz() {
   // }
 
   function handleSelectAnswer(option) {
+    setSelectedOption(option);
     setIsCorrect(option.correct);
     setShowModal(true);
   }
@@ -42,6 +41,7 @@ export default function Quiz() {
 
   function handleNextQuestion() {
     setShowModal(false);
+    setSelectedOption(null);
 
     if (current < Questions.length - 1) {
       setCurrent((prev) => prev + 1);

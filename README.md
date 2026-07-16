@@ -1,16 +1,37 @@
-# React + Vite
+# CeduGames
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 and Vite frontend for the CeduGames learning experience.
 
-Currently, two official plugins are available:
+## Requirements
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js 20.19 or newer
+- npm 10 or newer
 
-## React Compiler
+## Local development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm ci
+npm run dev
+```
 
-## Expanding the ESLint configuration
+## Production verification
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm run check
+npm run preview
+```
+
+`npm run check` runs linting and creates the optimized `dist` build. The production server must serve `index.html` for unknown routes because the application uses browser-based routing.
+
+## Deploy
+
+Build and run the included production container:
+
+```bash
+docker build -t cedugames .
+docker run --rm -p 8080:80 cedugames
+```
+
+Then open `http://localhost:8080`. The Nginx configuration includes SPA routing, asset caching, compression, and baseline security headers.
+
+For a static hosting provider, publish `dist` after `npm run build` and configure a rewrite from all unmatched paths to `/index.html`.

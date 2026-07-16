@@ -11,8 +11,8 @@ function VerifyCard() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
 
   const handleVerify = () => {
-    const code = otp.join("");
-    console.log("OTP:", code);
+    // API integration belongs here. Never log one-time passwords.
+    return otp.join("");
   };
 
   return (
