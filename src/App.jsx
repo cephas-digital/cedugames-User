@@ -10,6 +10,7 @@ const Signup = lazy(() => import("./pages/auth/sign-up"));
 const VerifyCard = lazy(() => import("./pages/auth/verification"));
 const Quiz = lazy(() => import("./components/quiz/quiz"));
 const AgeSelection = lazy(() => import("./pages/selection/ageSelection"));
+const LevelSelection = lazy(() => import("./pages/selection/levelSelection"));
 const LeaderBoard = lazy(() => import("./pages/games/leaderboard"));
 const Shop = lazy(() => import("./pages/games/shop"));
 const ResetPassword = lazy(() => import("./pages/auth/resetPassword"));
@@ -98,6 +99,8 @@ function App() {
             path="/notification"
             element={<ProtectedRoute><Notifications /></ProtectedRoute>}
           />
+          <Route path="/levels" element={<ProtectedRoute><LevelSelection /></ProtectedRoute>} />
+          <Route path="/play" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

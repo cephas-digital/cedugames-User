@@ -21,11 +21,15 @@ const Signup = () => {
     if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
     setLoading(true);
     try {
-      await apiRequest("/auth/user/register", {
+      const data = await apiRequest("/auth/user/register", {
         method: "POST",
         body: JSON.stringify({ name: form.name, username: form.username, email: form.email, age: Number(form.age), password: form.password }),
       });
-      navigate("/verification", { state: { email: form.email, purpose: "register" } });
+      if (data.requiresVerification) {
+        navigate("/verification", { state: { email: form.email, purpose: "register" } });
+      } else {
+        navigate("/login", { replace: true, state: { message: data.message } });
+      }
     } catch (requestError) { setError(requestError.message); }
     finally { setLoading(false); }
   };

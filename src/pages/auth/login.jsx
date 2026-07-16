@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthCard from "../../components/autoCard";
 import Input from "../../components/input";
 import HeaderText from "../../components/HeaderText";
@@ -9,6 +9,7 @@ import { apiRequest, saveSession } from "../../services/api";
 
 function Login() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,6 +28,7 @@ function Login() {
       <AuthCard><form onSubmit={submit}>
         <div className="text-center mb-6"><div className="flex justify-center"><img src={BB} className="w-20" alt="CeduGames" /></div><HeaderText>Welcome to CeduGames</HeaderText><p className="text-gray-500 text-sm">Cephas Educational Games</p></div>
         <div className="bg-purple-100 text-purple-600 text-sm rounded-lg px-4 py-3 mb-6">Let's get smart and have fun!</div>
+        {state?.message && <p className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{state.message}</p>}
         {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
         <div className="flex flex-col gap-4">
           <Input label="Email" name="email" type="email" value={form.email} onChange={update} required placeholder="example@mail.com" />
