@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "https://cedugames-backend.onrender.com";
 export const TOKEN_KEY = "cedugames_user_token";
 export const USER_KEY = "cedugames_user";
 export async function apiRequest(path, options = {}) {
