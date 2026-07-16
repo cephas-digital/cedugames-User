@@ -26,7 +26,7 @@ const LittleExploere = () => {
         <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-sm">
           <h2 className="text-gray-700 text-base mb-6">Select your subject</h2>
 
-          <div className="grid md:grid-cols-3 py-6 gap-6">
+          <div className="grid md:grid-cols-2 py-4 sm:py-6 gap-4 sm:gap-6 max-w-5xl mx-auto">
             <AgeCard
               link="/age-selection/little-explore/math"
               image={kid1}
