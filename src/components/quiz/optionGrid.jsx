@@ -6,11 +6,17 @@ export default function OptionsGrid({ options, onSelect }) {
     <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 sm:gap-6 mt-4 sm:mt-6">
       {options.map((option) => <li key={option.id} className="min-w-0 rounded-2xl overflow-hidden bg-white/90 shadow-md">
         <button type="button" onClick={() => onSelect(option)} className="w-full min-h-32 sm:min-h-44 p-3 sm:p-6 flex justify-center items-center cursor-pointer">
-          <span className="flex flex-col items-center gap-3 text-lg font-bold text-gray-800"><OptionMedia option={option} />{option.text && <span>{option.text}</span>}</span>
+          <span className="flex flex-col items-center gap-3 text-lg font-bold text-gray-800"><OptionShape option={option}/><OptionMedia option={option} />{option.text && <span className="rich-content" dangerouslySetInnerHTML={{ __html: option.text }}/>}</span>
         </button>
       </li>)}
     </ul>
   </div>;
+}
+
+function OptionShape({ option }) {
+  if (!option.shapeType || !option.shapeColor) return null;
+  const clips = { circle: "circle(50%)", square: "none", rectangle: "none", triangle: "polygon(50% 0,100% 100%,0 100%)", star: "polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 93%,50% 72%,21% 93%,32% 57%,2% 35%,39% 35%)", hexagon: "polygon(25% 7%,75% 7%,100% 50%,75% 93%,25% 93%,0 50%)" };
+  return <span role="img" aria-label={`${option.shapeColor} ${option.shapeType}`} style={{ display: "block", width: option.shapeType === "rectangle" ? 120 : 88, height: option.shapeType === "rectangle" ? 62 : 88, backgroundColor: option.shapeColor, clipPath: clips[option.shapeType], borderRadius: option.shapeType === "square" || option.shapeType === "rectangle" ? 8 : 0 }} />;
 }
 
 function OptionMedia({ option }) {
