@@ -1,12 +1,13 @@
 import BG from "../../assets/Group 28.png";
 import Navbar from "../../components/homeNavbar";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const melody = [523.25, 659.25, 783.99, 659.25, 587.33, 698.46, 783.99, 0];
 
 const Home = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [soundOn, setSoundOn] = useState(true);
   const audioContextRef = useRef(null);
   const melodyTimerRef = useRef(null);
@@ -103,7 +104,7 @@ const Home = () => {
 
       <div className="flex-1 flex flex-col justify-end items-center px-4 pt-20 sm:pt-40">
         <button
-          onClick={() => navigate("/quiz")}
+          onClick={() => navigate(`/quiz${location.search}`)}
           className="home-start-button relative z-10 text-white cursor-pointer shadow-xl w-full max-w-72 my-6 flex justify-center items-center bg-[#9B5DE5] hover:bg-[#8B4FD9] hover:shadow-2xl py-3 px-4 rounded-2xl transition-all duration-300"
         >
           Start game
