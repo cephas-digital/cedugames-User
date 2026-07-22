@@ -1,116 +1,23 @@
 import BG from "../../assets/Group 28.png";
 import Navbar from "../../components/homeNavbar";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import {useCallback,useEffect,useRef,useState} from "react";
+import {useNavigate,useSearchParams} from "react-router-dom";
+import {apiRequest} from "../../services/api";
 
-const melody = [523.25, 659.25, 783.99, 659.25, 587.33, 698.46, 783.99, 0];
+const melody=[523.25,659.25,783.99,659.25,587.33,698.46,783.99,0];
+const horizontal=[50,39,54,42,55,63,61,51,43];
 
-const Home = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [soundOn, setSoundOn] = useState(true);
-  const audioContextRef = useRef(null);
-  const melodyTimerRef = useRef(null);
-
-  const stopMelody = useCallback(() => {
-    window.clearTimeout(melodyTimerRef.current);
-    melodyTimerRef.current = null;
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-  }, []);
-
-  const startMelody = useCallback(() => {
-    if (!soundOn) return;
-    if (audioContextRef.current) {
-      audioContextRef.current.resume();
-      return;
-    }
-
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-
-    const context = new AudioContext();
-    audioContextRef.current = context;
-    let noteIndex = 0;
-
-    const playNextNote = () => {
-      if (audioContextRef.current !== context) return;
-      const frequency = melody[noteIndex % melody.length];
-
-      if (frequency) {
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
-        oscillator.type = "sine";
-        oscillator.frequency.value = frequency;
-        gain.gain.setValueAtTime(0.0001, context.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.035, context.currentTime + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.35);
-        oscillator.connect(gain).connect(context.destination);
-        oscillator.start();
-        oscillator.stop(context.currentTime + 0.38);
-      }
-
-      noteIndex += 1;
-      melodyTimerRef.current = window.setTimeout(playNextNote, 460);
-    };
-
-    context.resume().then(playNextNote).catch(stopMelody);
-  }, [soundOn, stopMelody]);
-
-  useEffect(() => {
-    if (!soundOn) {
-      stopMelody();
-      return undefined;
-    }
-
-    startMelody();
-    window.addEventListener("pointerdown", startMelody, { once: true });
-    return () => window.removeEventListener("pointerdown", startMelody);
-  }, [soundOn, startMelody, stopMelody]);
-
-  useEffect(() => stopMelody, [stopMelody]);
-
-  const toggleSound = () => setSoundOn((current) => !current);
-
-  return (
-    <div
-      className="min-h-screen w-full overflow-hidden flex flex-col text-white"
-      style={{
-        backgroundImage: `url(${BG})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      <Navbar />
-
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <span className="home-sparkle home-sparkle-one">â˜…</span>
-        <span className="home-sparkle home-sparkle-two">âœ¦</span>
-        <span className="home-sparkle home-sparkle-three">â˜…</span>
-        <span className="home-sparkle home-sparkle-four">âœ¦</span>
-      </div>
-
-      <button
-        type="button"
-        onClick={toggleSound}
-        aria-pressed={soundOn}
-        aria-label={soundOn ? "Turn background music off" : "Turn background music on"}
-        className="absolute right-3 top-32 sm:right-6 lg:top-24 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-lg text-white shadow-lg backdrop-blur-sm transition hover:scale-105 hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white"
-      >
-        <span aria-hidden="true">{soundOn ? "ðŸ”Š" : "ðŸ”‡"}</span>
-      </button>
-
-      <div className="flex-1 flex flex-col justify-end items-center px-4 pt-20 sm:pt-40">
-        <button
-          onClick={() => navigate(`/quiz${location.search}`)}
-          className="home-start-button relative z-10 text-white cursor-pointer shadow-xl w-full max-w-72 my-6 flex justify-center items-center bg-[#9B5DE5] hover:bg-[#8B4FD9] hover:shadow-2xl py-3 px-4 rounded-2xl transition-all duration-300"
-        >
-          Start game
-        </button>
-      </div>
-    </div>
-  );
-};
-export default Home;
+export default function Home(){
+ const navigate=useNavigate(),[params]=useSearchParams(),categoryId=params.get("category"),ageId=params.get("ageGroup");
+ const[levels,setLevels]=useState([]),[selectedId,setSelectedId]=useState(""),[loading,setLoading]=useState(Boolean(categoryId)),[error,setError]=useState(categoryId?"":"Choose a subject before selecting a level."),[soundOn,setSoundOn]=useState(true);const audioRef=useRef(null),timerRef=useRef(null);
+ const stop=useCallback(()=>{window.clearTimeout(timerRef.current);timerRef.current=null;if(audioRef.current){audioRef.current.close();audioRef.current=null}},[]);
+ const start=useCallback(()=>{if(!soundOn||audioRef.current)return;const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext)return;const context=new AudioContext();audioRef.current=context;let index=0;const play=()=>{if(audioRef.current!==context)return;const frequency=melody[index%melody.length];if(frequency){const oscillator=context.createOscillator(),gain=context.createGain();oscillator.frequency.value=frequency;gain.gain.setValueAtTime(.0001,context.currentTime);gain.gain.exponentialRampToValueAtTime(.03,context.currentTime+.04);gain.gain.exponentialRampToValueAtTime(.0001,context.currentTime+.35);oscillator.connect(gain).connect(context.destination);oscillator.start();oscillator.stop(context.currentTime+.38)}index+=1;timerRef.current=window.setTimeout(play,460)};context.resume().then(play).catch(stop)},[soundOn,stop]);
+ useEffect(()=>{if(!soundOn){stop();return undefined}window.addEventListener("pointerdown",start,{once:true});return()=>window.removeEventListener("pointerdown",start)},[soundOn,start,stop]);useEffect(()=>stop,[stop]);
+ useEffect(()=>{if(!categoryId)return;apiRequest(`/gameplay/categories/${categoryId}/levels`).then(data=>{const found=data.levels||[];setLevels(found);const available=[...found].reverse().find(level=>level.unlocked);setSelectedId(available?.id||"")}).catch(requestError=>setError(requestError.message)).finally(()=>setLoading(false))},[categoryId]);
+ const selected=levels.find(level=>level.id===selectedId),mapHeight=Math.max(580,levels.length*112+120);
+ return <div className="flex min-h-screen w-full flex-col overflow-hidden text-white" style={{backgroundImage:`url(${BG})`,backgroundSize:"cover",backgroundPosition:"center"}}><Navbar/><button type="button" onClick={()=>setSoundOn(value=>!value)} aria-label={soundOn?"Turn music off":"Turn music on"} className="fixed right-3 top-32 z-30 grid h-11 w-11 place-items-center rounded-full bg-black/40 text-xl shadow-lg backdrop-blur sm:right-6 lg:top-24">{soundOn?"🔊":"🔇"}</button>
+ <main className="relative flex-1 overflow-y-auto"><div className="sticky top-3 z-20 mx-auto mt-3 flex w-[calc(100%-1.5rem)] max-w-xl items-center justify-between gap-3 rounded-2xl bg-white/90 p-3 text-slate-800 shadow-lg backdrop-blur"><button onClick={()=>navigate(`/age-selection/little-explore?ageGroup=${ageId||""}`)} className="rounded-xl border px-3 py-2 text-sm font-bold text-purple-700">← Subjects</button><div className="min-w-0 text-center"><p className="truncate font-black">{selected?.name||"Choose a level"}</p>{selected&&<p className="text-xs text-slate-500">Best score {selected.best_score}% · {selected.time_limit_seconds}s per question</p>}</div><span className="rounded-full bg-purple-100 px-3 py-2 text-xs font-black text-purple-700">{levels.filter(level=>level.completed).length}/{levels.length}</span></div>
+ {loading?<MapState text="Loading your learning path…"/>:error?<MapState text={error} error/>:levels.length?<div className="relative mx-auto w-full max-w-5xl" style={{height:mapHeight}}>{levels.map((level,index)=>{const isSelected=level.id===selectedId;return <button key={level.id} disabled={!level.unlocked} onClick={()=>setSelectedId(level.id)} style={{left:`calc(${horizontal[index%horizontal.length]}% - 44px)`,bottom:index*108+95}} className={`absolute z-10 grid h-[88px] w-[88px] place-items-center rounded-full border-4 text-center shadow-lg transition sm:h-24 sm:w-24 ${level.completed?"border-emerald-300 bg-emerald-50 text-emerald-800":level.unlocked?isSelected?"scale-110 border-purple-500 bg-purple-600 text-white":"border-white bg-white/90 text-slate-800 hover:scale-105":"cursor-not-allowed border-white/80 bg-slate-200/85 text-slate-500"}`}><span><span className="block text-xl">{level.completed?"✓":level.unlocked?"★":"🔒"}</span><span className="text-xs font-black">Level {level.level_number}</span></span></button>})}</div>:<MapState text="No levels are available for this subject yet."/>}
+ </main><div className="fixed inset-x-0 bottom-0 z-30 flex justify-center bg-gradient-to-t from-slate-900/50 to-transparent p-4 pt-10"><button disabled={!selected} onClick={()=>navigate(`/quiz?ageGroup=${ageId}&category=${categoryId}&level=${selected.id}`)} className="home-start-button w-full max-w-sm rounded-2xl bg-purple-600 px-6 py-4 text-lg font-black text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50">{selected?`Play Level ${selected.level_number}`:"Select an unlocked level"}</button></div></div>;
+}
+function MapState({text,error=false}){return <div className={`mx-auto mt-24 max-w-md rounded-2xl p-6 text-center font-bold shadow-lg ${error?"bg-red-50 text-red-700":"bg-white/90 text-slate-600"}`}>{text}</div>}
