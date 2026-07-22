@@ -1,141 +1,18 @@
-import React from "react";
+import { useCallback, useEffect, useState } from "react";
 import Navbar from "../../components/homeNavbar";
 import LeaderboardIcon from "../../assets/leaderboard.png";
-import Alex from "../../assets/userone.png";
-import Sophie from "../../assets/usertwo.png";
-import Ryan from "../../assets/userthree.png";
+import { apiRequest, isSignedIn } from "../../services/api";
 
-const users = [
-  {
-    id: 1,
-    name: "Alex Martinez",
-    level: 45,
-    points: "12,450",
-    avatar: Alex,
-    rank: 1,
-    bg: "bg-yellow-100",
-    badge: "bg-yellow-500",
-  },
-  {
-    id: 2,
-    name: "Sophie Anderson",
-    level: 42,
-    points: "11,890",
-    avatar: Sophie,
-    rank: 2,
-    bg: "bg-gray-100",
-    badge: "bg-gray-400",
-  },
-  {
-    id: 3,
-    name: "Ryan Thompson",
-    level: 40,
-    points: "10,567",
-    avatar: Ryan,
-    rank: 3,
-    bg: "bg-orange-100",
-    badge: "bg-orange-500",
-  },
-];
-
-export default function Leaderboard() {
-  return (
-    <div>
-      <Navbar />
-      <div className="min-h-screen bg-gray-200 flex items-center justify-center p-3 sm:p-6">
-        <div className="w-full min-w-0 max-w-7xl bg-white rounded-2xl p-4 sm:p-8 shadow-sm">
-          <div className="flex justify-center mb-8">
-            <img
-              src={LeaderboardIcon}
-              alt="Leaderboard"
-              className="w-full max-w-2xl"
-            />
-          </div>
-          {/* <div className="flex justify-center items-end gap-6 mb-10">
-            <div className="flex flex-col items-center">
-              <div className="w-40 h-32 bg-blue-200 rounded-md flex items-center justify-center text-center">
-                <div>
-                  <p className="text-sm font-medium">Player 123</p>
-                  <p className="text-xs text-gray-600">Level 1</p>
-                  <p className="text-xs">900,000</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center">
-              <div className="w-44 h-40 bg-purple-200 rounded-md flex items-center justify-center text-center shadow">
-                <div>
-                  <p className="text-sm font-medium">Player 123</p>
-                  <p className="text-xs text-gray-600">Level 1</p>
-                  <p className="text-xs">900,000</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center">
-              <div className="w-36 h-28 bg-orange-200 rounded-md flex items-center justify-center text-center">
-                <div>
-                  <p className="text-sm font-medium">Player 123</p>
-                  <p className="text-xs text-gray-600">Level 1</p>
-                  <p className="text-xs">900,000</p>
-                </div>
-              </div>
-            </div>
-          </div> */}
-
-          {/* Users List */}
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">
-            All Users
-          </h3>
-
-          <div className="space-y-4">
-            {users.map((user) => (
-              <div
-                key={user.id}
-                className={`flex min-w-0 items-center justify-between gap-3 p-3 sm:p-4 rounded-xl ${user.bg}`}
-              >
-                <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-                  <div
-                    className={`w-8 h-8 flex items-center justify-center rounded-full text-white text-sm font-semibold ${user.badge}`}
-                  >
-                    {user.rank}
-                  </div>
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{user.name}</p>
-                    <p className="text-xs text-gray-500">Level {user.level}</p>
-                  </div>
-                </div>
-
-                <div className="shrink-0 text-right">
-                  <p className="text-sm font-semibold">{user.points}</p>
-                  <p className="text-xs text-gray-500">points</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Footer */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 text-sm text-gray-500">
-            <p>Showing 1-8 of 72 users</p>
-
-            <div className="flex flex-wrap justify-center items-center gap-2">
-              <button className="px-3 py-1 border rounded-md">Previous</button>
-              <button className="px-3 py-1 bg-purple-500 text-white rounded-md">
-                1
-              </button>
-              <button className="px-3 py-1 border rounded-md">2</button>
-              <button className="px-3 py-1 border rounded-md">3</button>
-              <button className="px-3 py-1 border rounded-md">Next</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+const periods=[{id:"all",label:"All time"},{id:"month",label:"Monthly"},{id:"week",label:"Weekly"}];
+const points=(p,period)=>Number(period==="all"?p.total_xp:p.period_xp||0);
+export default function Leaderboard(){
+ const[players,setPlayers]=useState([]),[me,setMe]=useState(null),[period,setPeriod]=useState("all"),[page,setPage]=useState(1),[pagination,setPagination]=useState({total:0,limit:20}),[loading,setLoading]=useState(true),[error,setError]=useState("");
+ const load=useCallback(async()=>{setLoading(true);setError("");try{const requests=[apiRequest(`/leaderboard?period=${period}&page=${page}&limit=20`)];if(isSignedIn())requests.push(apiRequest(`/leaderboard/me?period=${period}`));const[data,mine]=await Promise.all(requests);setPlayers(data.players||[]);setPagination(data.pagination||{});setMe(mine?.player||null)}catch(e){setError(e.message)}finally{setLoading(false)}},[period,page]);useEffect(()=>{load()},[load]);
+ useEffect(()=>{const refresh=()=>{if(document.visibilityState!=="hidden")load()};const timer=window.setInterval(refresh,30000);window.addEventListener("focus",refresh);document.addEventListener("visibilitychange",refresh);return()=>{window.clearInterval(timer);window.removeEventListener("focus",refresh);document.removeEventListener("visibilitychange",refresh)}},[load]);
+ const podium=players.slice(0,3),rest=players.slice(page===1?3:0);
+ return <div><Navbar/><main className="min-h-screen bg-slate-100 p-3 sm:p-6"><section className="mx-auto max-w-6xl rounded-3xl bg-white p-4 shadow-sm sm:p-8"><img src={LeaderboardIcon} alt="Leaderboard" className="mx-auto mb-5 w-full max-w-xl"/><div className="mb-7 flex justify-center"><div className="flex rounded-xl bg-slate-100 p-1">{periods.map(p=><button key={p.id} onClick={()=>{setPeriod(p.id);setPage(1)}} className={`rounded-lg px-4 py-2 text-sm font-bold ${period===p.id?"bg-white text-purple-700 shadow":"text-slate-500"}`}>{p.label}</button>)}</div></div>
+ {me&&<div className="mb-7 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-purple-600 to-violet-500 p-5 text-white"><div><p className="text-xs font-bold uppercase text-white/70">Your position</p><p className="text-2xl font-black">#{me.rank} · {me.name}</p></div><div className="flex gap-6 text-center"><Metric label="XP" value={points(me,period).toLocaleString()}/><Metric label="Completed" value={me.completed_levels}/><Metric label="Average" value={`${me.average_score}%`}/></div></div>}
+ {error?<div className="rounded-xl bg-red-50 p-5 text-center text-red-700">{error}</div>:loading?<div className="py-24 text-center text-slate-400">Loading leaderboard…</div>:<>{page===1&&podium.length>0&&<div className="mb-8 grid items-end gap-4 sm:grid-cols-3">{[podium[1],podium[0],podium[2]].filter(Boolean).map(p=><article key={p.id} className={`rounded-2xl p-5 text-center ${Number(p.rank)===1?"order-first bg-amber-50 ring-2 ring-amber-300 sm:order-none sm:py-8":"bg-slate-50"}`}><div className={`mx-auto grid h-16 w-16 place-items-center rounded-full text-2xl font-black ${Number(p.rank)===1?"bg-amber-400 text-white":"bg-purple-100 text-purple-700"}`}>{p.name?.[0]}</div><p className="mt-3 text-2xl font-black">#{p.rank}</p><h2 className="font-bold">{p.name}</h2><p className="text-sm text-slate-400">@{p.username}</p><p className="mt-2 font-black text-purple-700">{points(p,period).toLocaleString()} XP</p></article>)}</div>}<div className="overflow-hidden rounded-2xl border"><div className="grid grid-cols-[56px_1fr_auto] gap-3 bg-slate-50 px-4 py-3 text-xs font-bold uppercase text-slate-400 sm:grid-cols-[70px_1fr_120px_120px]"><span>Rank</span><span>Player</span><span className="hidden sm:block">Completed</span><span>XP</span></div>{rest.map(p=><div key={p.id} className={`grid grid-cols-[56px_1fr_auto] items-center gap-3 border-t px-4 py-4 sm:grid-cols-[70px_1fr_120px_120px] ${me?.id===p.id?"bg-purple-50":""}`}><b className="text-lg text-purple-700">#{p.rank}</b><div><p className="font-bold text-slate-900">{p.name}</p><p className="text-xs text-slate-400">Average {p.average_score}% · {p.attempts} attempts</p></div><span className="hidden sm:block">{p.completed_levels} levels</span><b className="text-right">{points(p,period).toLocaleString()}</b></div>)}</div><div className="mt-5 flex items-center justify-between text-sm text-slate-500"><span>{pagination.total||0} ranked players</span><div className="flex gap-2"><button disabled={page<=1} onClick={()=>setPage(p=>p-1)} className="rounded-lg border px-3 py-2 disabled:opacity-40">Previous</button><button disabled={page*20>=(pagination.total||0)} onClick={()=>setPage(p=>p+1)} className="rounded-lg border px-3 py-2 disabled:opacity-40">Next</button></div></div></>}
+ </section></main></div>;
 }
+function Metric({label,value}){return <div><p className="text-xl font-black">{value}</p><p className="text-xs text-white/70">{label}</p></div>}
