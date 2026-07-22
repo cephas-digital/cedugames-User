@@ -1,6 +1,5 @@
 import {useCallback,useEffect,useState} from "react";
 import Navbar from "../../components/homeNavbar";
-import LeaderboardIcon from "../../assets/leaderboard.png";
 import {apiRequest,isSignedIn} from "../../services/api";
 
 const periods=[{id:"all",label:"All time"},{id:"month",label:"Monthly"},{id:"week",label:"Weekly"}];
@@ -22,11 +21,14 @@ export default function Leaderboard(){
 
 function LivePodium({players,period}){
  const byRank=rank=>players.find(player=>Number(player.rank)===rank);
- return <div className="relative mx-auto w-full max-w-5xl overflow-hidden" aria-label="Top three players"><img src={LeaderboardIcon} alt="Leaderboard podium" className="block w-full"/><PodiumPlayer player={byRank(2)} period={period} className="left-[7%] top-[65%] w-[28%] bg-[#c9e6f5]"/><PodiumPlayer player={byRank(1)} period={period} className="left-[36%] top-[57%] w-[27%] bg-[#e2cdf5]"/><PodiumPlayer player={byRank(3)} period={period} className="left-[64%] top-[74%] w-[27%] bg-[#ffdfae]"/></div>;
+ return <div className="mx-auto grid max-w-4xl grid-cols-3 items-end gap-2 pt-8 sm:gap-4 sm:pt-14" aria-label="Top three players"><PodiumPlayer rank={2} player={byRank(2)} period={period}/><PodiumPlayer rank={1} player={byRank(1)} period={period}/><PodiumPlayer rank={3} player={byRank(3)} period={period}/></div>;
 }
 
-function PodiumPlayer({player,period,className}){
- return <div className={`absolute z-10 min-h-[16%] px-1 py-1 text-center text-slate-950 sm:px-2 sm:py-2 ${className}`}><p className="truncate text-[9px] font-black leading-tight sm:text-lg lg:text-2xl">{player?.name||"Waiting for player"}</p><p className="mt-0.5 truncate text-[7px] font-semibold leading-tight sm:text-sm lg:text-base">{player?`${player.completed_levels} completed ${Number(player.completed_levels)===1?"level":"levels"}`:"No ranking yet"}</p><p className="mt-0.5 text-[8px] font-black leading-tight sm:text-base lg:text-lg">{player?`${points(player,period).toLocaleString()} XP`:"—"}</p></div>;
+function PodiumPlayer({rank,player,period}){
+ const first=rank===1,second=rank===2;
+ const surface=first?"from-violet-300 to-purple-200":second?"from-sky-200 to-blue-100":"from-amber-200 to-orange-100";
+ const height=first?"h-52 sm:h-72":second?"h-44 sm:h-60":"h-40 sm:h-52";
+ return <article className={`relative flex ${height} min-w-0 flex-col items-center rounded-t-2xl bg-gradient-to-b ${surface} px-1.5 pt-9 text-center shadow-lg sm:px-4 sm:pt-14`}><div className={`absolute left-1/2 top-0 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white text-2xl font-black text-white shadow-lg sm:h-24 sm:w-24 sm:text-4xl ${first?"bg-purple-600":second?"bg-sky-500":"bg-orange-500"}`}>{player?.name?.trim()?.[0]?.toUpperCase()||"?"}</div>{first&&<span className="absolute -top-14 left-1/2 -translate-x-1/2 text-4xl sm:-top-20 sm:text-6xl" aria-hidden="true">👑</span>}<span className="text-2xl sm:text-4xl" aria-label={`Rank ${rank}`}>{rank===1?"🥇":rank===2?"🥈":"🥉"}</span><h2 className="mt-2 w-full truncate text-xs font-black text-slate-900 sm:text-xl">{player?.name||"Waiting for player"}</h2><p className="mt-1 text-[9px] font-semibold text-slate-600 sm:text-sm">{player?`${player.completed_levels} completed ${Number(player.completed_levels)===1?"level":"levels"}`:"No ranking yet"}</p><p className="mt-2 text-xs font-black text-purple-800 sm:text-lg">{player?`${points(player,period).toLocaleString()} XP`:"—"}</p></article>;
 }
 
 function Metric({label,value}){return <div><p className="text-xl font-black">{value}</p><p className="text-xs text-white/70">{label}</p></div>}
