@@ -11,9 +11,13 @@ function AgeCard({
   className,
 }) {
   return (
-    <Link to={link}>
+    <Link
+      to={link}
+      className="block rounded-2xl focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-300"
+      aria-label={`Choose ${title}`}
+    >
       <div
-        className={`p-4 sm:p-6 lg:p-10 h-auto ${color} ${className} md:flex grid gap-4 transition md:hover:scale-105 cursor-pointer`}
+        className={`grid h-full cursor-pointer gap-4 rounded-2xl border-2 border-purple-300 bg-white/80 p-4 shadow-md transition duration-200 active:scale-[0.98] active:border-purple-600 sm:p-6 md:flex md:border-purple-100 md:shadow-sm md:hover:scale-[1.02] md:hover:border-purple-400 md:hover:shadow-lg lg:p-8 ${color || ""} ${className || ""}`}
         style={{
           backgroundImage: `url(${bgImage})`,
           backgroundSize: "cover",
@@ -23,7 +27,7 @@ function AgeCard({
       >
         <img
           src={image}
-          alt="age group"
+          alt={title}
           className="w-32 sm:w-40 max-w-full mx-auto"
         />
 
