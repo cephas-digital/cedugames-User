@@ -1,10 +1,10 @@
 import { assetUrl } from "../../services/api";
 
-export default function OptionsGrid({ options, onSelect }) {
+export default function OptionsGrid({ options, onSelect, revealedOptionId }) {
   return <div className="w-full max-w-3xl mx-auto">
     <h1 className="my-4 text-lg sm:text-xl text-black">Select Option</h1>
     <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 sm:gap-6 mt-4 sm:mt-6">
-      {options.map((option) => <li key={option.id} className="min-w-0 rounded-2xl overflow-hidden bg-white/90 shadow-md">
+      {options.map((option) => <li key={option.id} className={`min-w-0 rounded-2xl overflow-hidden bg-white/90 shadow-md ${revealedOptionId===option.id?"ring-4 ring-emerald-400":""}`}>
         <button type="button" onClick={() => onSelect(option)} className="w-full min-h-32 sm:min-h-44 p-3 sm:p-6 flex justify-center items-center cursor-pointer">
           <span className="flex flex-col items-center gap-3 text-lg font-bold text-gray-800"><OptionShape option={option}/><OptionMedia option={option} />{option.text && <span className="rich-content" dangerouslySetInnerHTML={{ __html: option.text }}/>}</span>
         </button>
