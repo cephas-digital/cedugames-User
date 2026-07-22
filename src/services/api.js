@@ -3,7 +3,8 @@ export const assetUrl = (value) => value?.startsWith("/") ? `${API_URL}${value}`
 export const TOKEN_KEY = "cedugames_user_token";
 export const USER_KEY = "cedugames_user";
 export async function apiRequest(path, options = {}) {
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers: { "Content-Type": "application/json", ...options.headers } });
+  const token = localStorage.getItem(TOKEN_KEY);
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.errors?.[0]?.message || data.message || "Something went wrong.");
   return data;
