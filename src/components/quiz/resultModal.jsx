@@ -1,28 +1,5 @@
-import nextLEvel from "../../assets/next-level.png";
+import nextLevel from "../../assets/next-level.png";
 
-export default function ResultModal({ isCorrect, onNext }) {
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="text-black p-4 sm:p-6 rounded-2xl w-full max-w-80 text-center animate-scaleIn">
-        <h2 className="text-2xl font-bold mb-4">
-          {isCorrect ? "🎉 Correct!" : "❌ Wrong!"}
-        </h2>
-
-        {isCorrect && (
-          <img
-            src={nextLEvel}
-            alt="Next Level"
-            className="mx-auto mb-4 max-h-[60vh] object-contain"
-          />
-        )}
-
-        <button
-          onClick={onNext}
-          className="bg-purple-600 text-white px-5 py-2 rounded-xl hover:bg-purple-700 transition"
-        >
-          Next Question →
-        </button>
-      </div>
-    </div>
-  );
+export default function ResultModal({isCorrect}){
+ return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-live="assertive" aria-label={isCorrect?"Correct answer":"Wrong answer"}><div className={`w-full max-w-sm animate-scaleIn rounded-3xl border-4 bg-white p-7 text-center text-slate-900 shadow-2xl ${isCorrect?"border-emerald-400":"border-red-400"}`}><div className={`mx-auto grid h-20 w-20 place-items-center rounded-full text-5xl font-black text-white ${isCorrect?"bg-emerald-500":"bg-red-500"}`}>{isCorrect?"✓":"×"}</div><h2 className={`mt-4 text-3xl font-black ${isCorrect?"text-emerald-600":"text-red-600"}`}>{isCorrect?"Correct!":"Not quite!"}</h2><p className="mt-2 text-sm font-semibold text-slate-500">{isCorrect?"Great job — keep going!":"Good try — the next question is coming up."}</p>{isCorrect&&<img src={nextLevel} alt="" className="mx-auto mt-4 max-h-36 object-contain"/>}<div className="mx-auto mt-5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className={`h-full animate-[feedbackTimer_1.5s_linear_forwards] ${isCorrect?"bg-emerald-500":"bg-red-500"}`}/></div></div></div>;
 }
