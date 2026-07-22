@@ -1,52 +1,22 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "../homeNavbar";
-import { apiRequest } from "../../services/api";
+import { apiRequest, isSignedIn } from "../../services/api";
 import BG from "../../assets/BG.png";
 import OptionsGrid from "./optionGrid";
 import QuestionCard from "./questionCard";
-import ResultModal from "./resultModal";
 
-export default function Quiz() {
-  const [params] = useSearchParams();
-  const levelId = params.get("level");
-  const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(Boolean(levelId));
-  const [error, setError] = useState(levelId ? "" : "Choose a level before starting the quiz.");
-  const [current, setCurrent] = useState(0);
-  const [showModal, setShowModal] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(null);
-  const [selectedOption, setSelectedOption] = useState(null);
-
-  useEffect(() => {
-    if (!levelId) return;
-    apiRequest(`/catalog/levels/${levelId}/questions`)
-      .then((data) => setQuestions(data.questions || []))
-      .catch((requestError) => setError(requestError.message))
-      .finally(() => setLoading(false));
-  }, [levelId]);
-
-  const question = questions[current];
-  const handleSelectAnswer = (option) => { setSelectedOption(option); setIsCorrect(option.isCorrect); setShowModal(true); };
-  const handleNextQuestion = () => {
-    setShowModal(false); setSelectedOption(null);
-    if (current < questions.length - 1) setCurrent((value) => value + 1);
-    else alert("Quiz completed!");
-  };
-
-  return <div className="min-h-screen w-full overflow-x-hidden flex flex-col text-white" style={{ backgroundImage: `url(${BG})`, backgroundSize: "cover", backgroundPosition: "center" }}>
-    <Navbar />
-    <main className="w-full flex-1 px-3 sm:px-6 pb-8">
-      {loading ? <QuizState message="Loading your questions..." /> : error ? <QuizState message={error} error /> : !question ? <QuizState message="No published questions are available for this level yet." /> : <>
-        <div className="mx-auto mt-4 max-w-3xl text-sm font-bold text-white/90">Question {current + 1} of {questions.length}</div>
-        <QuestionCard question={question} />
-        <OptionsGrid options={question.options} onSelect={handleSelectAnswer} selectedOption={selectedOption} />
-      </>}
-    </main>
-    {showModal && question && <ResultModal isCorrect={isCorrect} onNext={handleNextQuestion} />}
-  </div>;
+export default function Quiz(){
+ const [params]=useSearchParams(),navigate=useNavigate(),levelId=params.get("level");
+ const [questions,setQuestions]=useState([]),[current,setCurrent]=useState(0),[answers,setAnswers]=useState([]),[selected,setSelected]=useState(null),[loading,setLoading]=useState(Boolean(levelId)),[submitting,setSubmitting]=useState(false),[error,setError]=useState(levelId?"":"Choose a level before starting the quiz."),[result,setResult]=useState(null),[status,setStatus]=useState(null);
+ useEffect(()=>{if(!levelId)return;if(!isSignedIn()){setError("Sign in before starting a game.");setLoading(false);return;}(async()=>{try{const [q,initial]=await Promise.all([apiRequest(`/catalog/levels/${levelId}/questions`),apiRequest("/gameplay/status")]);let s=initial;if(Number(s.lives_remaining)<=0&&Number(s.coins_count)>=Number(s.refill_coin_cost)){const refill=await apiRequest("/gameplay/refill",{method:"POST"});s={...s,lives_remaining:refill.livesRemaining,coins_count:refill.coinBalance};window.dispatchEvent(new Event("cedugames:wallet-updated"));}setQuestions(q.questions||[]);setStatus(s);if(Number(s.lives_remaining)<=0)setError(`You need ${Number(s.refill_coin_cost).toLocaleString()} coins to restore your lives before playing.`)}catch(e){setError(e.message)}finally{setLoading(false)}})()},[levelId]);
+ const question=questions[current];
+ const choose=option=>{if(selected)return;setSelected(option);setAnswers(list=>[...list.filter(a=>a.questionId!==question.id),{questionId:question.id,optionId:option.id}])};
+ const next=async()=>{if(!selected)return;if(current<questions.length-1){setCurrent(v=>v+1);setSelected(null);return;}setSubmitting(true);try{const data=await apiRequest("/gameplay/attempts",{method:"POST",body:JSON.stringify({attemptId:crypto.randomUUID(),levelId,answers})});setResult(data);setStatus({...status,lives_remaining:data.livesRemaining,coins_count:data.coinBalance,max_lives:data.maxLives});window.dispatchEvent(new Event("cedugames:wallet-updated"));}catch(e){setError(e.message)}finally{setSubmitting(false)}};
+ const retry=()=>{setCurrent(0);setAnswers([]);setSelected(null);setResult(null);setError("")};
+ return <div className="flex min-h-screen w-full flex-col overflow-x-hidden text-white" style={{backgroundImage:`url(${BG})`,backgroundSize:"cover",backgroundPosition:"center"}}><Navbar/><main className="w-full flex-1 px-3 pb-8 sm:px-6">
+  {loading?<State message="Loading your questions…"/>:error?<State message={error} error action={Number(status?.lives_remaining)===0?()=>navigate("/shop"):null}/>:result?<Completion result={result} onRetry={retry} onShop={()=>navigate("/shop")}/>:!question?<State message="No published questions are available for this level yet."/>:<><div className="mx-auto mt-4 flex max-w-3xl items-center justify-between text-sm font-bold"><span>Question {current+1} of {questions.length}</span><span>{Array.from({length:Number(status?.max_lives||3)},(_,i)=><span key={i} className={i<Number(status?.lives_remaining||0)?"text-red-500":"text-white/60"}>{i<Number(status?.lives_remaining||0)?"♥":"♡"}</span>)}</span></div><QuestionCard question={question}/><OptionsGrid options={question.options} onSelect={choose} selectedOption={selected}/>{selected&&<div className="mx-auto mt-5 flex max-w-3xl justify-end"><button disabled={submitting} onClick={next} className="rounded-xl bg-purple-600 px-6 py-3 font-bold shadow-lg disabled:opacity-60">{submitting?"Checking score…":current===questions.length-1?"Finish level":"Next question →"}</button></div>}</>}
+ </main></div>;
 }
-
-function QuizState({ message, error = false }) {
-  return <div className={`mx-auto mt-20 max-w-xl rounded-2xl p-8 text-center font-semibold shadow-lg ${error ? "bg-red-50 text-red-700" : "bg-white text-gray-600"}`}>{message}</div>;
-}
+function State({message,error=false,action}){return <div className={`mx-auto mt-20 max-w-xl rounded-2xl p-8 text-center font-semibold shadow-lg ${error?"bg-red-50 text-red-700":"bg-white text-gray-600"}`}><p>{message}</p>{action&&<button onClick={action} className="mt-5 rounded-xl bg-purple-600 px-5 py-2 text-white">Purchase coins</button>}</div>}
+function Completion({result,onRetry,onShop}){return <div className="mx-auto mt-12 max-w-xl rounded-3xl bg-white p-7 text-center text-slate-800 shadow-2xl"><div className="text-5xl">{result.passed?"🎉":"💜"}</div><h1 className="mt-3 text-2xl font-black">{result.passed?"Level passed!":"Keep trying!"}</h1><p className="mt-2 text-4xl font-black text-purple-600">{result.scorePercent}%</p><p className="text-sm text-slate-500">{result.correctAnswers} of {result.totalQuestions} correct · Pass mark {result.passingScorePercent}%</p>{result.lifeLost&&<p className="mt-4 rounded-xl bg-red-50 p-3 font-semibold text-red-700">One life was used. {result.livesRemaining} {result.livesRemaining===1?"life":"lives"} available.</p>}{result.refilled&&<p className="mt-4 rounded-xl bg-amber-50 p-3 text-amber-800">Your last life was used. {result.refillCoinCost.toLocaleString()} coins restored all {result.maxLives} lives.</p>}{result.needsPurchase&&<p className="mt-4 rounded-xl bg-red-50 p-3 text-red-700">Your lives are empty and your coin balance is too low to refill them.</p>}<div className="mt-6 flex justify-center gap-3">{result.needsPurchase?<button onClick={onShop} className="rounded-xl bg-purple-600 px-5 py-2 font-bold text-white">Purchase coins</button>:<button onClick={onRetry} className="rounded-xl bg-purple-600 px-5 py-2 font-bold text-white">Play again</button>}</div></div>}
