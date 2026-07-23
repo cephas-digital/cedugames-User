@@ -27,6 +27,8 @@ export default function CoinShop() {
   const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [buying, setBuying] = useState("");
+  const [notice, setNotice] = useState("");
   const signedIn = isSignedIn();
 
   useEffect(() => {
@@ -57,6 +59,47 @@ export default function CoinShop() {
       live = false;
     };
   }, [signedIn]);
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const transactionId = query.get("transaction_id");
+    const txRef = query.get("tx_ref");
+    const status = query.get("status");
+    if (!transactionId || !txRef) return;
+    window.history.replaceState({}, "", window.location.pathname);
+    if (status !== "successful" && status !== "completed") {
+      setError("Payment was not completed. No coins were added.");
+      return;
+    }
+    setLoading(true);
+    apiRequest("/coins/purchases/verify", {
+      method: "POST",
+      body: JSON.stringify({ transactionId, txRef }),
+    }).then(async (result) => {
+      setNotice(result.credited ? "Payment verified. Your coins have been added." : "This payment was already credited.");
+      const [wallet, history] = await Promise.all([
+        apiRequest("/coins/me"),
+        apiRequest("/coins/me/transactions?limit=50"),
+      ]);
+      setBalance(wallet.balance);
+      setTransactions(history.transactions || []);
+      setActiveTab("history");
+    }).catch((e) => setError(e.message)).finally(() => setLoading(false));
+  }, []);
+  const purchase = async (packageId) => {
+    setBuying(packageId);
+    setError("");
+    setNotice("");
+    try {
+      const result = await apiRequest("/coins/purchases", {
+        method: "POST",
+        body: JSON.stringify({ packageId }),
+      });
+      window.location.assign(result.checkoutUrl);
+    } catch (e) {
+      setError(e.message);
+      setBuying("");
+    }
+  };
   const groups = useMemo(
     () =>
       transactions.reduce((all, item) => {
@@ -105,6 +148,7 @@ export default function CoinShop() {
               {error}
             </div>
           )}
+          {notice && <div role="status" className="mb-6 rounded-xl bg-emerald-50 p-4 text-emerald-700">{notice}</div>}
           {loading ? (
             <div className="py-20 text-center text-gray-500">
               Loading your coin shop…
@@ -134,9 +178,14 @@ export default function CoinShop() {
                           {pkg.description}
                         </p>
                       )}
-                      <div className="mt-5 w-full rounded-full bg-[#9B5DE5] px-4 py-2 font-bold text-white">
-                        {money(pkg.price_minor, pkg.currency)}
-                      </div>
+                      <button
+                        type="button"
+                        disabled={Boolean(buying)}
+                        onClick={() => purchase(pkg.id)}
+                        className="mt-5 w-full cursor-pointer rounded-full bg-[#9B5DE5] px-4 py-2 font-bold text-white disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {buying === pkg.id ? "Opening secure checkout…" : `Buy for ${money(pkg.price_minor, pkg.currency)}`}
+                      </button>
                     </article>
                   ))}
                 </div>
@@ -145,10 +194,7 @@ export default function CoinShop() {
                   No coin packages are available right now.
                 </div>
               )}
-              <p className="mt-7 text-center text-xs text-slate-400">
-                Purchasing will be enabled after secure payment verification is
-                connected.
-              </p>
+              <p className="mt-7 text-center text-xs text-slate-400">Payments are securely processed by Flutterwave. Coins are added only after server verification.</p>
             </>
           ) : !signedIn ? (
             <div className="py-20 text-center text-gray-500">
