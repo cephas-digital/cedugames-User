@@ -1,143 +1,41 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ProfileHeader from "../../assets/profileIcon.png";
-import profile from "../../assets/profile.png";
 import Navbar from "../../components/homeNavbar";
-import Trophy from "../../assets/trophy.png";
-import Badge from "../../assets/badge.png";
+import BadgeImage from "../../assets/badge.png";
 import Coin from "../../assets/coin.png";
+import Trophy from "../../assets/trophy.png";
+import { apiRequest, clearSession, updateCachedUser } from "../../services/api";
 
-export default function Profile() {
-  const badges = [
-    { id: 1, img: Badge, unlocked: true },
-    { id: 2, img: Badge, unlocked: true },
-    { id: 3, img: Badge, unlocked: false },
-    { id: 4, img: Badge, unlocked: true },
-    { id: 5, img: Badge, unlocked: false },
-    { id: 6, img: Badge, unlocked: true },
-    { id: 7, img: Badge, unlocked: false },
-    { id: 8, img: Badge, unlocked: true },
-    { id: 9, img: Badge, unlocked: true },
-    { id: 10, img: Badge, unlocked: true },
-    { id: 11, img: Badge, unlocked: false },
-    { id: 12, img: Badge, unlocked: true },
-    { id: 13, img: Badge, unlocked: false },
-    { id: 14, img: Badge, unlocked: true },
-    { id: 15, img: Badge, unlocked: false },
-    { id: 16, img: Badge, unlocked: true },
-    // add more...
-  ];
+const date=value=>value?new Intl.DateTimeFormat("en-NG",{dateStyle:"medium"}).format(new Date(value)):"Not yet";
+const ago=value=>{if(!value)return"Not yet";const minutes=Math.max(0,Math.floor((Date.now()-new Date(value).getTime())/60000));if(minutes<1)return"Just now";if(minutes<60)return`${minutes}m ago`;if(minutes<1440)return`${Math.floor(minutes/60)}h ago`;return date(value)};
+const criteriaLabel={levels_completed:"levels completed",attempts_completed:"game attempts",perfect_scores:"perfect scores",total_xp:"total XP"};
+const tierColor={bronze:"bg-amber-100 text-amber-800",silver:"bg-slate-200 text-slate-700",gold:"bg-yellow-100 text-yellow-800",platinum:"bg-violet-100 text-violet-700"};
 
-  return (
-    <div>
-      <Navbar />
+function Spinner({label="Loading"}){return <div role="status" className="flex items-center justify-center gap-3 py-20 text-sm font-semibold text-purple-700"><span className="h-6 w-6 animate-spin rounded-full border-2 border-purple-200 border-t-purple-600"/>{label}</div>}
+function Stat({image,label,value,color}){return <article className={`flex min-w-0 items-center gap-3 rounded-2xl p-3 sm:p-4 ${color}`}><span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white sm:h-14 sm:w-14"><img src={image} alt="" className="h-8 w-8 object-contain"/></span><div className="min-w-0"><p className="text-xs text-slate-500">{label}</p><p className="truncate text-lg font-black text-slate-900 sm:text-xl">{value}</p></div></article>}
+function Progress({label,value,total}){const percent=total?Math.min(100,Math.round(value*100/total)):0;return <div><div className="mb-1 flex justify-between text-xs font-semibold text-slate-600"><span>{label}</span><span>{value}/{total}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-purple-500" style={{width:`${percent}%`}}/></div></div>}
 
-      <div className="min-h-screen bg-gray-200 flex items-center justify-center p-3 sm:p-6">
-        <div className="w-full min-w-0 max-w-7xl bg-white rounded-2xl p-4 sm:p-10 shadow-sm">
-          <div className="flex justify-center mb-10">
-            <div className="relative">
-              <img
-                src={ProfileHeader}
-                alt="Profile"
-                className="w-full max-w-xl"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center mb-8">
-            <div className="relative">
-              <img
-                src={profile}
-                alt="avatar"
-                className="w-36 h-36 rounded-full object-cover"
-              />
-
-              <div className="absolute bottom-2 right-2 bg-gray-200 p-1 rounded-md text-xs cursor-pointer">
-                ✏️
-              </div>
-            </div>
-
-            <h2 className="mt-4 font-semibold text-gray-800">Player 123</h2>
-            <p className="text-sm text-gray-500">danieldavid@gmail.com</p>
-          </div>
-
-          <div className="flex justify-center gap-6 mb-10 flex-wrap">
-            <div className="w-full sm:w-auto bg-purple-100 rounded-xl px-5 sm:px-10 py-4 flex items-center gap-3">
-              <div className=" w-full bg-white p-4 rounded-full flex items-center justify-center">
-                <img
-                  src={Trophy}
-                  className=" w-10 h-10"
-                  alt="badge"
-                />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Level</p>
-                <p className="font-semibold">28</p>
-              </div>
-            </div>
-
-            <div className="w-full sm:w-auto bg-yellow-100 rounded-xl px-5 sm:px-10 py-3 flex items-center gap-3">
-              <div className=" w-full bg-white p-4 rounded-full flex items-center justify-center">
-                <img
-                  src={Coin}
-                  className=" w-10 h-10"
-                  alt="badge"
-                />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Coins</p>
-                <p className="font-semibold">1400</p>
-              </div>
-            </div>
-
-            <div className="w-full sm:w-auto bg-blue-100 rounded-xl px-5 sm:px-10 py-3 flex items-center gap-3">
-              <div className=" w-full bg-white p-4 rounded-full flex items-center justify-center">
-                <img
-                  src={Badge}
-                  className=" w-10 h-10"
-                  alt="badge"
-                />
-              </div>
-              <div>
-                <p className="text-base text-[#000000]">Badge</p>
-                <p className="font-semibold">4</p>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-base text-black mb-4">Badge Collection</p>
-
-            <div className="grid grid-cols-3 min-[400px]:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-4">
-              {badges.map((badge) => (
-                <div
-                  key={badge.id}
-                  className={`p-3 rounded-xl flex items-center justify-center transition
-         ${badge.unlocked ? "bg-purple-50" : "bg-gray-100 opacity-40"}
-           `}
-                >
-                  <img
-                    src={badge.img}
-                    alt="badge"
-                    className={`w-10 h-10 ${
-                      !badge.unlocked ? "grayscale" : ""
-                    }`}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-8 sm:mt-10 flex justify-center sm:justify-end border-t border-gray-100 pt-6">
-            <Link
-              to="/login"
-              className="w-full sm:w-auto inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 px-8 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2"
-            >
-              Log out
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+export default function Profile(){
+ const navigate=useNavigate(),[data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[form,setForm]=useState({name:"",username:"",age:""});
+ const load=async()=>{setLoading(true);setError("");try{const response=await apiRequest("/auth/user/profile");setData(response);const u=response.user;setForm({name:u.name,username:u.username,age:u.age})}catch(e){setError(e.message)}finally{setLoading(false)}};
+ useEffect(()=>{load()},[]);
+ const user=data?.user,performance=user?.performance||{},earned=useMemo(()=>(data?.badges||[]).filter(b=>b.earned),[data]),passRate=Number(performance.attempts)?Math.round(Number(performance.passed_attempts)*100/Number(performance.attempts)):0;
+ const save=async event=>{event.preventDefault();setSaving(true);setError("");try{const response=await apiRequest("/auth/user/profile",{method:"PATCH",body:JSON.stringify({name:form.name,username:form.username,age:Number(form.age)})});setData(current=>({...current,user:{...current.user,...response.user}}));updateCachedUser(response.user);setEditing(false)}catch(e){setError(e.message)}finally{setSaving(false)}};
+ const logout=()=>{clearSession();navigate("/login",{replace:true})};
+ return <div className="min-h-screen bg-slate-100"><Navbar/><main className="mx-auto w-full max-w-7xl p-3 sm:p-6 lg:p-8"><section className="overflow-hidden rounded-2xl bg-white shadow-sm sm:rounded-3xl">
+  <div className="px-3 pt-5 sm:px-8 sm:pt-8"><img src={ProfileHeader} alt="Profile" className="mx-auto w-full max-w-4xl"/></div>
+  {loading?<Spinner label="Loading your profile..."/>:error&&!data?<div className="p-6 text-center"><p className="rounded-xl bg-red-50 p-4 text-red-700">{error}</p><button onClick={load} className="mt-4 rounded-xl bg-purple-600 px-5 py-2.5 font-bold text-white">Try again</button></div>:<div className="px-4 pb-8 sm:px-8 lg:px-12">
+   {error&&<div role="alert" className="mx-auto mb-5 max-w-3xl rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+   <div className="flex flex-col items-center text-center"><div className="grid h-28 w-28 place-items-center rounded-full border-4 border-purple-400 bg-purple-100 text-5xl font-black text-purple-700 shadow-sm sm:h-36 sm:w-36">{user.name?.[0]?.toUpperCase()||"P"}</div><h1 className="mt-4 text-xl font-black text-slate-900 sm:text-2xl">{user.name}</h1><p className="text-sm text-slate-500">@{user.username} · {user.email}</p><button onClick={()=>setEditing(true)} className="mt-4 rounded-full bg-purple-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-purple-700">Edit profile</button></div>
+   <div className="mx-auto mt-7 grid max-w-4xl grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:grid-cols-4"><Stat image={Trophy} label="Total XP" value={Number(user.total_xp).toLocaleString()} color="bg-purple-100"/><Stat image={Coin} label="Coin balance" value={Number(user.coins_count).toLocaleString()} color="bg-yellow-100"/><Stat image={BadgeImage} label="Badges earned" value={earned.length.toLocaleString()} color="bg-blue-100"/><Stat image={Trophy} label="Levels completed" value={Number(performance.completed_levels).toLocaleString()} color="bg-emerald-100"/></div>
+   <div className="mt-9 grid gap-6 lg:grid-cols-3"><section className="rounded-2xl border border-slate-200 p-4 sm:p-6 lg:col-span-2"><h2 className="text-lg font-black text-slate-900">Learning progress</h2><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4"><div><p className="text-xs text-slate-400">Attempts</p><p className="text-2xl font-black">{Number(performance.attempts)}</p></div><div><p className="text-xs text-slate-400">Pass rate</p><p className="text-2xl font-black">{passRate}%</p></div><div><p className="text-xs text-slate-400">Average</p><p className="text-2xl font-black">{Number(performance.average_score)}%</p></div><div><p className="text-xs text-slate-400">Best score</p><p className="text-2xl font-black">{Number(performance.best_score)}%</p></div></div><div className="mt-6"><Progress label="Correct answers" value={Number(performance.correct_answers)} total={Number(performance.questions_answered)}/></div><p className="mt-5 text-xs text-slate-400">Last played: {ago(performance.last_played)}</p></section>
+    <section className="rounded-2xl border border-slate-200 p-4 sm:p-6"><h2 className="text-lg font-black">Account</h2><dl className="mt-4 space-y-4 text-sm"><div><dt className="text-slate-400">Age</dt><dd className="font-bold">{user.age}</dd></div><div><dt className="text-slate-400">Lives remaining</dt><dd className="font-bold">{Number(user.lives_remaining)}</dd></div><div><dt className="text-slate-400">Member since</dt><dd className="font-bold">{date(user.created_at)}</dd></div><div><dt className="text-slate-400">Sign-in method</dt><dd className="font-bold">{user.is_oauth?"Google":"Email and password"}</dd></div><div><dt className="text-slate-400">Email status</dt><dd className="font-bold text-emerald-600">{user.is_verified?"Verified":"Verification pending"}</dd></div></dl></section></div>
+   <section className="mt-9"><div className="flex items-end justify-between gap-3"><div><h2 className="text-lg font-black">Badge collection</h2><p className="text-sm text-slate-500">Keep learning to unlock every badge.</p></div><span className="text-sm font-bold text-purple-600">{earned.length}/{data.badges.length}</span></div><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">{data.badges.map(badge=><article key={badge.id} className={`rounded-2xl border p-3 text-center sm:p-4 ${badge.earned?"border-purple-200 bg-purple-50":"border-slate-200 bg-slate-50 opacity-60"}`}><img src={BadgeImage} alt="" className={`mx-auto h-12 w-12 ${badge.earned?"":"grayscale"}`}/><h3 className="mt-2 text-sm font-black">{badge.name}</h3><span className={`mt-2 inline-block rounded-full px-2 py-1 text-[10px] font-bold capitalize ${tierColor[badge.tier]}`}>{badge.tier}</span><p className="mt-2 text-xs text-slate-500">{badge.earned?`Earned ${date(badge.earned_at)}`:`Requires ${Number(badge.criteria_value).toLocaleString()} ${criteriaLabel[badge.criteria_type]}`}</p></article>)}</div></section>
+   <section className="mt-9"><h2 className="text-lg font-black">Recent learning activity</h2>{data.recentAttempts.length?<div className="mt-4 space-y-3">{data.recentAttempts.map(attempt=><article key={attempt.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-bold text-slate-900">{attempt.category_name} · Level {attempt.level_number}</p><p className="text-xs text-slate-500">{attempt.level_name} · {ago(attempt.created_at)}</p></div><div className="flex items-center justify-between gap-4 sm:justify-end"><span className={`rounded-full px-3 py-1 text-xs font-bold ${attempt.passed?"bg-emerald-100 text-emerald-700":"bg-red-50 text-red-600"}`}>{attempt.passed?"Passed":"Keep trying"}</span><span className="text-lg font-black text-purple-700">{attempt.score_percent}%</span></div></article>)}</div>:<div className="mt-4 rounded-2xl border-2 border-dashed p-10 text-center text-sm text-slate-400">Play your first level to start building your activity.</div>}</section>
+   <div className="mt-10 flex justify-center border-t border-slate-100 pt-6 sm:justify-end"><button onClick={logout} className="w-full rounded-full border border-red-200 bg-red-50 px-8 py-3 text-sm font-bold text-red-600 sm:w-auto">Log out</button></div>
+  </div>}
+ </section></main>
+ {editing&&<div className="fixed inset-0 z-50 grid place-items-end bg-slate-900/50 p-0 sm:place-items-center sm:p-4" onMouseDown={()=>setEditing(false)}><form onSubmit={save} onMouseDown={e=>e.stopPropagation()} className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-lg sm:rounded-3xl sm:p-7"><div className="flex items-start justify-between"><div><h2 className="text-xl font-black">Edit profile</h2><p className="text-sm text-slate-500">Update your public player details.</p></div><button type="button" onClick={()=>setEditing(false)} className="text-2xl text-slate-400">×</button></div><label className="mt-6 block text-sm font-bold">Display name<input required minLength="2" maxLength="120" value={form.name} onChange={e=>setForm(x=>({...x,name:e.target.value}))} className="mt-1 w-full rounded-xl border px-4 py-3 outline-none focus:border-purple-500"/></label><label className="mt-4 block text-sm font-bold">Username<input required minLength="3" maxLength="40" value={form.username} onChange={e=>setForm(x=>({...x,username:e.target.value.toLowerCase()}))} className="mt-1 w-full rounded-xl border px-4 py-3 outline-none focus:border-purple-500"/><span className="mt-1 block text-xs font-normal text-slate-400">Letters, numbers, dots, underscores and hyphens only.</span></label><label className="mt-4 block text-sm font-bold">Age<input required type="number" min="1" max="130" value={form.age} onChange={e=>setForm(x=>({...x,age:e.target.value}))} className="mt-1 w-full rounded-xl border px-4 py-3 outline-none focus:border-purple-500"/></label><label className="mt-4 block text-sm font-bold text-slate-400">Email address<input disabled value={user.email} className="mt-1 w-full cursor-not-allowed rounded-xl border bg-slate-100 px-4 py-3"/><span className="mt-1 block text-xs font-normal">Email changes require verification and are not available here.</span></label><div className="mt-7 flex gap-3"><button type="button" onClick={()=>setEditing(false)} className="flex-1 rounded-xl border px-4 py-3 font-bold">Cancel</button><button disabled={saving} className="flex-1 rounded-xl bg-purple-600 px-4 py-3 font-bold text-white disabled:opacity-60">{saving?"Saving...":"Save changes"}</button></div></form></div>}
+ </div>;
 }

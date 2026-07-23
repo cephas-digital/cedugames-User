@@ -15,6 +15,14 @@ export function saveSession(token, user) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
+export function updateCachedUser(user) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  window.dispatchEvent(new Event("cedugames:profile-updated"));
+}
+export function clearSession() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
 export const isSignedIn = () => Boolean(localStorage.getItem(TOKEN_KEY));
 
 function currentUserId() {

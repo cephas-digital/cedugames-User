@@ -5,9 +5,10 @@ import Badge from "./badge";
 import {apiRequest,cacheWallet,getCachedWallet,getLearningSelection,isSignedIn,USER_KEY} from "../services/api";
 
 export default function Navbar(){
- const location=useLocation(),navigate=useNavigate(),[wallet,setWallet]=useState(()=>getCachedWallet());
- const user=JSON.parse(localStorage.getItem(USER_KEY)||"null"),learningSelection=getLearningSelection();
+ const location=useLocation(),navigate=useNavigate(),[wallet,setWallet]=useState(()=>getCachedWallet()),[user,setUser]=useState(()=>JSON.parse(localStorage.getItem(USER_KEY)||"null"));
+ const learningSelection=getLearningSelection();
  useEffect(()=>{if(!isSignedIn())return undefined;let live=true;const load=()=>apiRequest("/gameplay/status").then(data=>{cacheWallet(data);if(live)setWallet(data)}).catch(()=>undefined);load();window.addEventListener("cedugames:wallet-updated",load);return()=>{live=false;window.removeEventListener("cedugames:wallet-updated",load)}},[]);
+ useEffect(()=>{const loadUser=()=>setUser(JSON.parse(localStorage.getItem(USER_KEY)||"null"));window.addEventListener("cedugames:profile-updated",loadUser);return()=>window.removeEventListener("cedugames:profile-updated",loadUser)},[]);
  const homePath=learningSelection?`/play?ageGroup=${learningSelection.ageGroupId}&category=${learningSelection.categoryId}`:"/age-selection";
  const navItems=[{label:"Home",to:homePath},{label:"Leaderboard",to:"/leaderboard"},{label:"Shop",to:"/shop"},{label:"Profile",to:"/profile"}];
  const white=["/leaderboard","/shop","/profile","/notifications"].includes(location.pathname),text=white?"text-black":"text-white",bg=white?"bg-white":"bg-gradient-to-r from-purple-300/70 to-purple-400/60 backdrop-blur-md";
