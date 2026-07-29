@@ -2,11 +2,11 @@ import {useEffect,useState} from "react";
 import {useLocation,useNavigate} from "react-router-dom";
 import NavItem from "./NavItem";
 import Badge from "./badge";
-import {apiRequest,cacheWallet,getCachedWallet,getLearningSelection,isSignedIn,USER_KEY} from "../services/api";
+import {apiRequest,cacheWallet,getCachedWallet,getLearningSelection,isSignedIn,loadLearningSelection,USER_KEY} from "../services/api";
 
 export default function Navbar(){
- const location=useLocation(),navigate=useNavigate(),[wallet,setWallet]=useState(()=>getCachedWallet()),[user,setUser]=useState(()=>JSON.parse(localStorage.getItem(USER_KEY)||"null")),[unread,setUnread]=useState(0);
- const learningSelection=getLearningSelection();
+ const location=useLocation(),navigate=useNavigate(),[wallet,setWallet]=useState(()=>getCachedWallet()),[user,setUser]=useState(()=>JSON.parse(localStorage.getItem(USER_KEY)||"null")),[unread,setUnread]=useState(0),[learningSelection,setLearningSelection]=useState(()=>getLearningSelection());
+ useEffect(()=>{if(!isSignedIn())return;loadLearningSelection().then(setLearningSelection).catch(()=>undefined)},[]);
  useEffect(()=>{if(!isSignedIn())return undefined;let live=true;const load=()=>apiRequest("/gameplay/status").then(data=>{cacheWallet(data);if(live)setWallet(data)}).catch(()=>undefined);load();window.addEventListener("cedugames:wallet-updated",load);return()=>{live=false;window.removeEventListener("cedugames:wallet-updated",load)}},[]);
  useEffect(()=>{const loadUser=()=>setUser(JSON.parse(localStorage.getItem(USER_KEY)||"null"));window.addEventListener("cedugames:profile-updated",loadUser);return()=>window.removeEventListener("cedugames:profile-updated",loadUser)},[]);
  useEffect(()=>{if(!isSignedIn())return undefined;let live=true;const load=()=>apiRequest("/notifications?limit=1").then(data=>{if(live)setUnread(Number(data.unreadCount||0))}).catch(()=>undefined);load();window.addEventListener("cedugames:notifications-updated",load);return()=>{live=false;window.removeEventListener("cedugames:notifications-updated",load)}},[]);

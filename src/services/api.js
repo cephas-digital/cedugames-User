@@ -70,6 +70,24 @@ export function saveLearningSelection(ageGroupId, categoryId) {
   catch { selections = {}; }
   selections[userId] = { ageGroupId, categoryId };
   localStorage.setItem(SELECTIONS_KEY, JSON.stringify(selections));
+  apiRequest("/auth/user/preferences/learning-selection", {
+    method: "PUT",
+    body: JSON.stringify({ ageGroupId, categoryId }),
+  }).catch(() => undefined);
+  return selections[userId];
+}
+
+export async function loadLearningSelection() {
+  const userId = currentUserId();
+  if (!userId) return null;
+  const data = await apiRequest("/auth/user/preferences");
+  if (!data.learningSelection) return getLearningSelection();
+  let selections = {};
+  try { selections = JSON.parse(localStorage.getItem(SELECTIONS_KEY) || "{}"); }
+  catch { selections = {}; }
+  selections[userId] = data.learningSelection;
+  localStorage.setItem(SELECTIONS_KEY, JSON.stringify(selections));
+  return data.learningSelection;
 }
 
 export function getCachedWallet() {

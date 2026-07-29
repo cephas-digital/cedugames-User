@@ -5,7 +5,7 @@ import Input from "../../components/input";
 import HeaderText from "../../components/HeaderText";
 import Bt from "../../assets/bt.png";
 import BB from "../../assets/Background+Border.png";
-import { apiRequest, saveSession } from "../../services/api";
+import { apiRequest, loadLearningSelection, saveSession } from "../../services/api";
 
 function Login() {
   const navigate = useNavigate();
@@ -19,6 +19,7 @@ function Login() {
     try {
       const data = await apiRequest("/auth/login", { method: "POST", body: JSON.stringify(form) });
       saveSession(data.token, data.user);
+      await loadLearningSelection().catch(() => null);
       navigate("/age-selection", { replace: true });
     } catch (requestError) { setError(requestError.message); }
     finally { setLoading(false); }

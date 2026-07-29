@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { isSignedIn } from "../services/api";
 
 import Backgroundpic from "../assets/b.png";
 import side from "../assets/side.png";
@@ -13,7 +14,7 @@ export default function Background() {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
-          setTimeout(() => navigate("/login"), 500);
+          setTimeout(() => navigate(isSignedIn() ? "/age-selection" : "/login"), 500);
           return 100;
         }
         return prev + 1;
