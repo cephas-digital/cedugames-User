@@ -2,14 +2,14 @@ import {useEffect,useState} from "react";
 import {useLocation,useNavigate} from "react-router-dom";
 import NavItem from "./NavItem";
 import Badge from "./badge";
-import {apiRequest,cacheWallet,getCachedWallet,getLearningSelection,isSignedIn,loadLearningSelection,USER_KEY} from "../services/api";
+import {apiRequest,cacheLearningSelection,cacheWallet,getCachedWallet,getLearningSelection,isSignedIn,USER_KEY} from "../services/api";
 
 export default function Navbar(){
  const location=useLocation(),navigate=useNavigate(),[wallet,setWallet]=useState(()=>getCachedWallet()),[user,setUser]=useState(()=>JSON.parse(localStorage.getItem(USER_KEY)||"null")),[unread,setUnread]=useState(0),[learningSelection,setLearningSelection]=useState(()=>getLearningSelection());
- useEffect(()=>{if(!isSignedIn())return;loadLearningSelection().then(setLearningSelection).catch(()=>undefined)},[]);
- useEffect(()=>{if(!isSignedIn())return undefined;let live=true;const load=()=>apiRequest("/gameplay/status").then(data=>{cacheWallet(data);if(live)setWallet(data)}).catch(()=>undefined);load();window.addEventListener("cedugames:wallet-updated",load);return()=>{live=false;window.removeEventListener("cedugames:wallet-updated",load)}},[]);
+ useEffect(()=>{if(!isSignedIn())return undefined;let live=true;apiRequest("/auth/user/dashboard-bootstrap").then(data=>{if(!live)return;cacheWallet(data.wallet);setWallet(data.wallet);setUnread(Number(data.unreadCount||0));if(data.learningSelection){cacheLearningSelection(data.learningSelection);setLearningSelection(data.learningSelection)}if(data.user){localStorage.setItem(USER_KEY,JSON.stringify(data.user));setUser(data.user)}}).catch(()=>undefined);return()=>{live=false}},[]);
+ useEffect(()=>{if(!isSignedIn())return undefined;let live=true;const load=()=>apiRequest("/gameplay/status").then(data=>{cacheWallet(data);if(live)setWallet(data)}).catch(()=>undefined);window.addEventListener("cedugames:wallet-updated",load);return()=>{live=false;window.removeEventListener("cedugames:wallet-updated",load)}},[]);
  useEffect(()=>{const loadUser=()=>setUser(JSON.parse(localStorage.getItem(USER_KEY)||"null"));window.addEventListener("cedugames:profile-updated",loadUser);return()=>window.removeEventListener("cedugames:profile-updated",loadUser)},[]);
- useEffect(()=>{if(!isSignedIn())return undefined;let live=true;const load=()=>apiRequest("/notifications?limit=1").then(data=>{if(live)setUnread(Number(data.unreadCount||0))}).catch(()=>undefined);load();window.addEventListener("cedugames:notifications-updated",load);return()=>{live=false;window.removeEventListener("cedugames:notifications-updated",load)}},[]);
+ useEffect(()=>{if(!isSignedIn())return undefined;let live=true;const load=()=>apiRequest("/notifications?limit=1").then(data=>{if(live)setUnread(Number(data.unreadCount||0))}).catch(()=>undefined);window.addEventListener("cedugames:notifications-updated",load);return()=>{live=false;window.removeEventListener("cedugames:notifications-updated",load)}},[]);
  const homePath=learningSelection?`/play?ageGroup=${learningSelection.ageGroupId}&category=${learningSelection.categoryId}`:"/age-selection";
  const navItems=[{label:"Home",to:homePath},{label:"Daily reward",to:"/daily-reward"},{label:"Leaderboard",to:"/leaderboard"},{label:"Shop",to:"/shop"},{label:"Profile",to:"/profile"}];
  const white=["/leaderboard","/shop","/profile","/notification","/daily-reward"].includes(location.pathname),text=white?"text-black":"text-white",bg=white?"bg-white":"bg-gradient-to-r from-purple-300/70 to-purple-400/60 backdrop-blur-md";

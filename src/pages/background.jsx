@@ -6,22 +6,19 @@ import Backgroundpic from "../assets/b.png";
 import side from "../assets/side.png";
 
 export default function Background() {
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(8);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => navigate(isSignedIn() ? "/age-selection" : "/login"), 500);
-          return 100;
-        }
-        return prev + 1;
-      });
-    }, 35);
-
-    return () => clearInterval(interval);
+    const frame = requestAnimationFrame(() => setProgress(100));
+    const timer = window.setTimeout(
+      () => navigate(isSignedIn() ? "/age-selection" : "/login"),
+      850,
+    );
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
   }, [navigate]);
 
   return (
@@ -45,7 +42,7 @@ export default function Background() {
 
       <div className="w-full max-w-[380px] h-3 bg-white/30 rounded-full mt-3 overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-200 shadow-[0_0_10px_orange]"
+          className="h-full bg-gradient-to-r from-orange-400 to-orange-600 transition-[width] duration-700 ease-out shadow-[0_0_10px_orange]"
           style={{ width: `${progress}%` }}
         />
       </div>

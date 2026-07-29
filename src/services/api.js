@@ -62,6 +62,17 @@ export function getLearningSelection() {
   catch { return null; }
 }
 
+export function cacheLearningSelection(selection) {
+  const userId = currentUserId();
+  if (!userId || !selection?.ageGroupId || !selection?.categoryId) return null;
+  let selections = {};
+  try { selections = JSON.parse(localStorage.getItem(SELECTIONS_KEY) || "{}"); }
+  catch { selections = {}; }
+  selections[userId] = selection;
+  localStorage.setItem(SELECTIONS_KEY, JSON.stringify(selections));
+  return selection;
+}
+
 export function saveLearningSelection(ageGroupId, categoryId) {
   const userId = currentUserId();
   if (!userId || !ageGroupId || !categoryId) return;
@@ -82,12 +93,7 @@ export async function loadLearningSelection() {
   if (!userId) return null;
   const data = await apiRequest("/auth/user/preferences");
   if (!data.learningSelection) return getLearningSelection();
-  let selections = {};
-  try { selections = JSON.parse(localStorage.getItem(SELECTIONS_KEY) || "{}"); }
-  catch { selections = {}; }
-  selections[userId] = data.learningSelection;
-  localStorage.setItem(SELECTIONS_KEY, JSON.stringify(selections));
-  return data.learningSelection;
+  return cacheLearningSelection(data.learningSelection);
 }
 
 export function getCachedWallet() {
