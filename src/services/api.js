@@ -4,26 +4,51 @@ export const TOKEN_KEY = "cedugames_user_token";
 export const USER_KEY = "cedugames_user";
 const SELECTIONS_KEY = "cedugames_learning_selections";
 const WALLETS_KEY = "cedugames_wallet_states";
+let expiryTimer;
+
+function returnToLogin() {
+  clearSession();
+  if (window.location.pathname !== "/login") window.location.replace("/login");
+}
+
+function scheduleSessionExpiry(token) {
+  window.clearTimeout(expiryTimer);
+  if (!token) return;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const remaining = (Number(payload.exp) * 1000) - Date.now();
+    if (!Number.isFinite(remaining) || remaining <= 0) returnToLogin();
+    else expiryTimer = window.setTimeout(returnToLogin, remaining);
+  } catch {
+    returnToLogin();
+  }
+}
+
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem(TOKEN_KEY);
   const response = await fetch(`${API_URL}${path}`, { ...options, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } });
   const data = await response.json().catch(() => ({}));
+  if (response.status === 401 && data.code === "SESSION_INVALID" && token) returnToLogin();
   if (!response.ok) throw new Error(data.errors?.[0]?.message || data.message || "Something went wrong.");
   return data;
 }
 export function saveSession(token, user) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  scheduleSessionExpiry(token);
 }
 export function updateCachedUser(user) {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
   window.dispatchEvent(new Event("cedugames:profile-updated"));
 }
 export function clearSession() {
+  window.clearTimeout(expiryTimer);
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
 export const isSignedIn = () => Boolean(localStorage.getItem(TOKEN_KEY));
+
+scheduleSessionExpiry(localStorage.getItem(TOKEN_KEY));
 
 function currentUserId() {
   try { return JSON.parse(localStorage.getItem(USER_KEY) || "null")?.id || null; }
