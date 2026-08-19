@@ -20,6 +20,21 @@ img, svg { max-width: 100%; }
   animation: home-button-pulse 2s ease-in-out infinite;
 }
 
+.level-map-node {
+  left: calc(var(--level-x) * 1% - 34px);
+  bottom: var(--level-bottom);
+  touch-action: manipulation;
+}
+
+@media (min-width: 640px) {
+  .level-map-node { left: calc(var(--level-x) * 1% - 38px); }
+}
+
+@media (max-width: 359px) {
+  .level-map-node { left: clamp(12px, calc(var(--level-x) * 1% - 34px), calc(100% - 80px)); }
+  .level-selection-page .home-start-button { font-size: .9rem; }
+}
+
 .home-sparkle {
   position: absolute;
   color: rgba(255, 244, 125, 0.9);

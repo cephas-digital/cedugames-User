@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/navbar";
 import { apiRequest } from "../../services/api";
-import kidOne from "../../assets/userone.png";
-import kidTwo from "../../assets/usertwo.png";
-import kidThree from "../../assets/userthree.png";
+import kidOne from "../../assets/age-explorer-v2.png";
+import kidTwo from "../../assets/age-adventurer-v2.png";
+import kidThree from "../../assets/age-challenger-v2.png";
 
 const kids = [kidOne, kidTwo, kidThree];
 const themes = [
@@ -37,7 +37,7 @@ export default function AgeSelection() {
           <h1 className="mt-3 text-3xl font-black leading-tight sm:text-5xl">How old are you?</h1>
           <p className="mx-auto mt-2 max-w-xl text-sm font-semibold text-white/90 sm:text-lg">Choose your age crew and we’ll find games made just for you!</p>
           <div className="age-float mx-auto mt-5 flex w-fit items-end justify-center">
-            {kids.map((kid, index) => <img key={kid} src={kid} alt="" className={`h-20 w-20 object-contain drop-shadow-xl sm:h-28 sm:w-28 ${index === 1 ? "z-10 scale-110" : "opacity-90"}`} />)}
+            {kids.map((kid, index) => <img key={kid} src={kid} alt="" className={`h-20 w-20 rounded-full border-4 border-white/70 object-cover drop-shadow-xl sm:h-28 sm:w-28 ${index === 1 ? "z-10 scale-110" : "opacity-90"}`} />)}
           </div>
         </section>
 
@@ -64,7 +64,7 @@ export default function AgeSelection() {
                     <div className="flex items-center gap-4 md:flex-col md:text-center">
                       <div className={`relative grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-3xl bg-gradient-to-br ${theme.gradient} shadow-lg sm:h-28 sm:w-28`}>
                         <span className="absolute right-2 top-1 text-xl">{theme.emoji}</span>
-                        <img src={group.image_url || kids[index % kids.length]} alt="" className="h-[90%] w-[90%] object-contain transition duration-300 group-hover:scale-110" />
+                        <img src={kids[index % kids.length]} alt={`${theme.label} character`} className="h-full w-full object-cover transition duration-300 group-hover:scale-110" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-black uppercase tracking-wider text-slate-500">{theme.label}</p>
