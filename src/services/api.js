@@ -28,7 +28,9 @@ export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem(TOKEN_KEY);
   const response = await fetch(`${API_URL}${path}`, { ...options, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } });
   const data = await response.json().catch(() => ({}));
-  if (response.status === 401 && data.code === "SESSION_INVALID" && token) returnToLogin();
+  // Any unauthorized response means the bearer session is no longer usable
+  // (expired, revoked, or invalid). Clear it immediately and return to login.
+  if (response.status === 401 && token) returnToLogin();
   if (!response.ok) throw new Error(data.errors?.[0]?.message || data.message || "Something went wrong.");
   return data;
 }
