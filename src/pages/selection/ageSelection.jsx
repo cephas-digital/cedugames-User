@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/navbar";
-import { apiRequest } from "../../services/api";
+import { apiRequest, assetUrl } from "../../services/api";
 import kidOne from "../../assets/age-explorer-v2.png";
 import kidTwo from "../../assets/age-adventurer-v2.png";
 import kidThree from "../../assets/age-challenger-v2.png";
@@ -64,7 +64,7 @@ export default function AgeSelection() {
                     <div className="flex items-center gap-4 md:flex-col md:text-center">
                       <div className={`relative grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-3xl bg-gradient-to-br ${theme.gradient} shadow-lg sm:h-28 sm:w-28`}>
                         <span className="absolute right-2 top-1 text-xl">{theme.emoji}</span>
-                        <img src={kids[index % kids.length]} alt={`${theme.label} character`} className="h-full w-full object-cover transition duration-300 group-hover:scale-110" />
+                        <img src={assetUrl(group.image_url) || kids[index % kids.length]} alt={`${group.name} banner`} className="h-full w-full object-cover transition duration-300 group-hover:scale-110" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-black uppercase tracking-wider text-slate-500">{theme.label}</p>
