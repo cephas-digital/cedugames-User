@@ -3,6 +3,7 @@ import Navbar from "../../components/homeNavbar";
 import Coin from "../../assets/coin.png";
 import CoinHeader from "../../assets/coin-header.png";
 import { apiRequest, isSignedIn } from "../../services/api";
+import { AirtimePanel } from "./airtime";
 
 const money = (minor, currency) =>
   new Intl.NumberFormat("en-NG", {
@@ -21,7 +22,7 @@ const transactionDetail = (item) =>
     : item.reference;
 
 export default function CoinShop() {
-  const [activeTab, setActiveTab] = useState("packages");
+  const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get("tab") === "airtime" ? "airtime" : "packages");
   const [packages, setPackages] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [balance, setBalance] = useState(null);
@@ -126,21 +127,22 @@ export default function CoinShop() {
               </div>
             )}
           </div>
-          <div className="mb-8 flex justify-center gap-10 font-bold">
+          <div className="mb-6 flex w-full gap-2 overflow-x-auto border-b border-slate-100 px-1 font-bold [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mb-8 sm:justify-center sm:gap-8">
             {[
               ["packages", "Coin packages"],
               ["history", "Transaction history"],
+              ["airtime", "Buy airtime"],
             ].map(([id, label]) => (
               <button
                 key={id}
-                onClick={() => setActiveTab(id)}
-                className={`cursor-pointer border-b-2 pb-2 ${activeTab === id ? "border-[#9B5DE5] text-[#9B5DE5]" : "border-transparent text-gray-400"}`}
+                onClick={() => {setActiveTab(id);window.history.replaceState({},"",id==="airtime"?"/shop?tab=airtime":"/shop")}}
+                className={`shrink-0 cursor-pointer whitespace-nowrap border-b-2 px-3 pb-3 text-sm sm:text-base ${activeTab === id ? "border-[#9B5DE5] text-[#9B5DE5]" : "border-transparent text-gray-400"}`}
               >
                 {label}
               </button>
             ))}
           </div>
-          {error && (
+          {activeTab !== "airtime" && error && (
             <div
               role="alert"
               className="mb-6 rounded-xl bg-red-50 p-4 text-red-700"
@@ -148,8 +150,8 @@ export default function CoinShop() {
               {error}
             </div>
           )}
-          {notice && <div role="status" className="mb-6 rounded-xl bg-emerald-50 p-4 text-emerald-700">{notice}</div>}
-          {loading ? (
+          {activeTab !== "airtime" && notice && <div role="status" className="mb-6 rounded-xl bg-emerald-50 p-4 text-emerald-700">{notice}</div>}
+          {activeTab === "airtime" ? <AirtimePanel/> : loading ? (
             <div className="py-20 text-center text-gray-500">
               Loading your coin shop…
             </div>

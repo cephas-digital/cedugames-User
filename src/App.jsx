@@ -20,7 +20,6 @@ const Home = lazy(() => import("./pages/games/home"));
 const ForgotPassword = lazy(() => import("./pages/auth/forgotPassword"));
 const Notifications = lazy(() => import("./pages/games/notification"));
 const DailyReward = lazy(() => import("./pages/games/dailyReward"));
-const Airtime = lazy(() => import("./pages/games/airtime"));
 const NotFound = lazy(() => import("./pages/notFound"));
 function App() {
   return (
@@ -104,7 +103,7 @@ function App() {
           <Route path="/levels" element={<ProtectedRoute><LevelSelection /></ProtectedRoute>} />
           <Route path="/play" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/daily-reward" element={<ProtectedRoute><DailyReward /></ProtectedRoute>} />
-          <Route path="/airtime" element={<ProtectedRoute><Airtime /></ProtectedRoute>} />
+          <Route path="/airtime" element={<Navigate to="/shop?tab=airtime" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
