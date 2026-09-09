@@ -26,7 +26,8 @@ function scheduleSessionExpiry(token) {
 
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem(TOKEN_KEY);
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } });
+  const isFormData = options.body instanceof FormData;
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers: { ...(!isFormData ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } });
   const data = await response.json().catch(() => ({}));
   // Any unauthorized response means the bearer session is no longer usable
   // (expired, revoked, or invalid). Clear it immediately and return to login.
