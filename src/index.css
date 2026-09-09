@@ -1,12 +1,16 @@
 @import "tailwindcss";
+
+@font-face { font-family: "Baloo 2"; src: url("./assets/fonts/baloo-400.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Baloo 2"; src: url("./assets/fonts/baloo-500.ttf") format("truetype"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Baloo 2"; src: url("./assets/fonts/baloo-600.ttf") format("truetype"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Baloo 2"; src: url("./assets/fonts/baloo-700.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Baloo 2"; src: url("./assets/fonts/baloo-800.ttf") format("truetype"); font-weight: 800; font-display: swap; }
 /* @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;700&display=swap"); */
 
-.Outfit {
-  font-family: "Outfit", sans-serif;
-}
+.Outfit { font-family: "Baloo 2", system-ui, sans-serif; }
 
 body {
-  font-family: "Outfit", sans-serif;
+  font-family: "Baloo 2", system-ui, sans-serif;
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
@@ -15,6 +19,17 @@ body {
 
 #root { min-height: 100vh; width: 100%; }
 img, svg { max-width: 100%; }
+button, input, select, textarea { font: inherit; }
+
+.brand-loader { display: grid; place-content: center; justify-items: center; gap: 1rem; padding: 2rem; text-align: center; color: #56347f; background: radial-gradient(circle at top, #fff 0, #f9f5ff 54%, #f2eaff 100%); }
+.brand-loader__logo { width: min(19rem, 72vw); animation: brand-breathe 1.8s ease-in-out infinite; }
+.brand-loader__dots { display: flex; gap: .45rem; }
+.brand-loader__dots i { width: .65rem; height: .65rem; border-radius: 999px; animation: brand-dot .9s ease-in-out infinite alternate; }
+.brand-loader__dots i:nth-child(1) { background: #f02229; }
+.brand-loader__dots i:nth-child(2) { background: #fecb03; animation-delay: .15s; }
+.brand-loader__dots i:nth-child(3) { background: #0177d2; animation-delay: .3s; }
+@keyframes brand-breathe { 50% { transform: translateY(-6px) scale(1.025); } }
+@keyframes brand-dot { to { transform: translateY(-7px); opacity: .55; } }
 
 .home-start-button {
   animation: home-button-pulse 2s ease-in-out infinite;
@@ -97,3 +112,9 @@ img, svg { max-width: 100%; }
 @keyframes subject-twinkle { 0%,100% { opacity: .45; transform: scale(.96); } 50% { opacity: .9; transform: scale(1.04); } }
 @keyframes subject-drift { 0%,100% { transform: translate(0); } 50% { transform: translate(15px,-20px); } }
 @media (prefers-reduced-motion: reduce) { .subject-card,.subject-hero-kid,.subject-doodles,.subject-bubble { animation: none; } .subject-card:hover { transform: none; } }
+
+/* Brand typography is intentionally last so component utilities cannot override it. */
+#root,
+#root *:not(svg):not(path) {
+  font-family: "Baloo 2", system-ui, sans-serif !important;
+}

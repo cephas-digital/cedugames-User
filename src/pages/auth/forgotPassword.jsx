@@ -2,7 +2,7 @@ import AuthCard from "../../components/autoCard";
 import Input from "../../components/input";
 import Bt from "../../assets/bt.png";
 import { Button } from "../../components/button";
-import BB from "../../assets/Overlay.png";
+import { BrandLogo } from "../../components/Brand";
 import { Link } from "react-router-dom";
 
 function ForgotPassword() {
@@ -18,12 +18,7 @@ function ForgotPassword() {
       <AuthCard>
         <div className="text-center mb-6">
           <div className=" flex justify-center items-center ">
-            <img
-              src={BB}
-              className=" w-20"
-              sss
-              alt=""
-            />
+            <BrandLogo className="mb-5 w-48 sm:w-56" />
           </div>
           <h1 className="text-2xl sm:text-[32px] text-[#281B22] font-bold">
             Forgot Password

@@ -1,6 +1,6 @@
 import PasswordInput from "../../components/passwordInput";
 import Bt from "../../assets/bt.png";
-import ResetIcon from "../../assets/resetIcon.png";
+import { BrandLogo } from "../../components/Brand";
 import AuthCard from "../../components/autoCard";
 import HeaderText from "../../components/HeaderText";
 import PasswordStrength from "../../components/passwordStrength";
@@ -20,11 +20,7 @@ function ResetPassword() {
       <AuthCard>
         <div className=" p-2 space-y-6 text-center">
           <div className="flex justify-center">
-            <img
-              src={ResetIcon}
-              className=" w-20"
-              alt="reset-icon"
-            />
+            <BrandLogo className="mb-2 w-48 sm:w-56" />
           </div>
 
           <div>

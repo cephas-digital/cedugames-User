@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Bt from "../../assets/bt.png";
-import Icon from "../../assets/Icon.png";
+import { BrandLogo } from "../../components/Brand";
 import Text from "../../components/text";
 import Input from "../../components/input";
 import { apiRequest } from "../../services/api";
@@ -39,7 +39,7 @@ const Signup = () => {
       <div className="w-full max-w-5xl grid md:grid-cols-[minmax(0,25rem)_minmax(0,1fr)]">
         <div className="bg-[#BF5AF2] rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none w-full p-5 sm:p-8 grid justify-center items-center">
           <div><Text className="text-white font-medium" size="text-[32px]">Welcome to CeduGames</Text><Text className="text-white mb-4 font-light">Cephas Educational Games</Text><Text className="text-white font-light">Where learning meets play.</Text></div>
-          <img src={Icon} className="w-40 mx-auto" alt="CeduGames" />
+          <BrandLogo className="mx-auto my-5 w-56" />
           <Text className="text-white mb-4 font-light">Join thousands of students learning through interactive challenges and fun adventures.</Text>
         </div>
         <div className="flex items-center rounded-b-2xl md:rounded-r-2xl md:rounded-bl-none justify-center bg-gray-50 p-5 sm:p-8 md:py-12">

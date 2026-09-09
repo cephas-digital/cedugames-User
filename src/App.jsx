@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { isSignedIn } from "./services/api";
+import { BrandLoader } from "./components/Brand";
 
 const ProtectedRoute = ({ children }) => isSignedIn() ? children : <Navigate to="/login" replace />;
 
@@ -24,7 +25,7 @@ const NotFound = lazy(() => import("./pages/notFound"));
 function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<div className="app-loading" role="status">Loading…</div>}>
+      <Suspense fallback={<BrandLoader fullScreen message="Loading your adventure…" />}>
         <Routes>
           <Route
             path="/"

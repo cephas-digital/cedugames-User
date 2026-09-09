@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { isSignedIn } from "../services/api";
 
 import Backgroundpic from "../assets/b.png";
-import side from "../assets/side.png";
+import { BrandLogo } from "../components/Brand";
 
 export default function Background() {
   const [progress, setProgress] = useState(8);
@@ -30,11 +30,7 @@ export default function Background() {
         backgroundPosition: "center",
       }}
     >
-      <img
-        src={side}
-        alt="side"
-        className="w-full max-w-105"
-      />
+      <BrandLogo className="w-full max-w-md drop-shadow-2xl" priority />
 
       <p className="mt-8 text-sm tracking-widest text-white/80">
         Loading fun...

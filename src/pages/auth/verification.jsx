@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthCard from "../../components/autoCard";
 import Bt from "../../assets/bt.png";
-import Vc from "../../assets/VC.png";
+import { BrandLogo } from "../../components/Brand";
 import OTPInput from "../../components/otp-input";
 import { apiRequest } from "../../services/api";
 
@@ -38,7 +38,7 @@ function VerifyCard() {
   return (
     <div className="min-h-screen font-Nunito flex items-center justify-center bg-gray-100 p-4" style={{ backgroundImage: `url(${Bt})`, backgroundSize: "cover", backgroundPosition: "center" }}>
       <AuthCard><div className="text-center mb-6">
-        <div className="flex justify-center mb-4"><img src={Vc} alt="Verification code" className="w-20" /></div>
+        <div className="flex justify-center mb-4"><BrandLogo className="w-48 sm:w-56" /></div>
         <h1 className="text-2xl sm:text-[32px] font-bold">Verify OTP</h1>
         <p className="text-gray-500 text-sm mt-2">Enter the 6-digit code sent to {email || "your email"}.</p>
         {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
