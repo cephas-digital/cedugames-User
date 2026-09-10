@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "https://cedugames-backend.onrender.com";
+const API_URL = (import.meta.env.VITE_API_URL || "https://cedu-api.cephasict.com").replace(/\/+$/, "");
 export const assetUrl = (value) => value?.startsWith("/") ? `${API_URL}${value}` : value;
 export const TOKEN_KEY = "cedugames_user_token";
 export const USER_KEY = "cedugames_user";
