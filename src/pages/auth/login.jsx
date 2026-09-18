@@ -10,7 +10,7 @@ import { apiRequest, loadLearningSelection, saveSession } from "../../services/a
 function Login() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ identifier: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const update = (event) => setForm({ ...form, [event.target.name]: event.target.value });
@@ -32,7 +32,7 @@ function Login() {
         {state?.message && <p className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{state.message}</p>}
         {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
         <div className="flex flex-col gap-4">
-          <Input label="Email" name="email" type="email" value={form.email} onChange={update} required placeholder="example@mail.com" />
+          <Input label="Email or phone number" name="identifier" value={form.identifier} onChange={update} required placeholder="you@example.com or +2348012345678" />
           <Input label="Password" name="password" type="password" value={form.password} onChange={update} required placeholder="Your password" />
           <Link to="/forgot-password"><p className="text-right text-sm text-[#FFAF42] font-semibold">Forgot Password?</p></Link>
           <button disabled={loading} className="w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white disabled:opacity-60">{loading ? "Signing in..." : "Login"}</button>

@@ -67,7 +67,7 @@ export default function AgeSelection() {
                         <img src={assetUrl(group.image_url) || kids[index % kids.length]} alt={`${group.name} banner`} className="h-full w-full object-cover transition duration-300 group-hover:scale-110" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-black uppercase tracking-wider text-slate-500">{theme.label}</p>
+                        <p className="text-xs font-black uppercase tracking-wider text-slate-500">{group.display_label || theme.label}</p>
                         <h2 className="mt-1 text-xl font-black text-slate-900">Ages {group.min_age}–{group.max_age}</h2>
                         <p className="mt-1 font-bold text-purple-700">{group.name}</p>
                         <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500 sm:text-sm">{group.subtitle || group.description || "Fun games and exciting learning challenges!"}</p>
