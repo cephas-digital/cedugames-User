@@ -6,7 +6,7 @@ import Text from "../../components/text";
 import Input from "../../components/input";
 import { apiRequest } from "../../services/api";
 
-const initialForm = { name: "", username: "", email: "", age: "", password: "", confirmPassword: "" };
+const initialForm = { name: "", username: "", email: "", phone: "", age: "", password: "", confirmPassword: "" };
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ const Signup = () => {
     try {
       const data = await apiRequest("/auth/user/register", {
         method: "POST",
-        body: JSON.stringify({ name: form.name, username: form.username, email: form.email, age: Number(form.age), password: form.password }),
+        body: JSON.stringify({ name: form.name, username: form.username, email: form.email, phone: form.phone, age: Number(form.age), password: form.password }),
       });
       if (data.requiresVerification) {
         navigate("/verification", { state: { email: form.email, purpose: "register" } });
@@ -51,6 +51,7 @@ const Signup = () => {
               <Input label="Full name" name="name" value={form.name} onChange={update} required placeholder="Jane Doe" />
               <Input label="Username" name="username" value={form.username} onChange={update} required placeholder="janedoe123" />
               <Input label="Email" name="email" type="email" value={form.email} onChange={update} required placeholder="example@mail.com" />
+              <Input label="Phone number" name="phone" type="tel" value={form.phone} onChange={update} required placeholder="+2348012345678" />
               <Input label="Age" name="age" type="number" min="1" max="130" value={form.age} onChange={update} required placeholder="10" />
               <Input label="Create password" name="password" type="password" value={form.password} onChange={update} required placeholder="At least 10 characters" />
               <Input label="Confirm password" name="confirmPassword" type="password" value={form.confirmPassword} onChange={update} required placeholder="Repeat password" />
