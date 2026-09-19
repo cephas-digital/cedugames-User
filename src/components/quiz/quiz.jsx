@@ -134,11 +134,16 @@ export default function Quiz() {
       .then((review) =>
         setResult((currentResult) => ({
           ...currentResult,
-          breakdown: review.breakdown || [],
+          breakdown: (review.breakdown || []).map((item) => {
+            const source = questions.find(
+              (candidate) => candidate.id === item.questionId,
+            );
+            return { ...item, options: source?.options || [] };
+          }),
         })),
       )
       .catch(() => undefined);
-  }, [result, levelId, answers]);
+  }, [result, levelId, answers, questions]);
   const choose = async (option) => {
     if (selected || checking) return;
     unlockGameAudio();
@@ -510,6 +515,23 @@ function Completion({ result, nextLevelId, onNext, onRetry, onHome, onShop }) {
                 >
                   {item.isCorrect ? "Correct" : "Not quite"}
                 </p>
+                <div className="mt-3 space-y-2">
+                  {(item.options || []).map((option, optionIndex) => {
+                    const isSelected = option.id === item.selectedOptionId;
+                    const isCorrect = option.id === item.correctOptionId;
+                    return (
+                      <div
+                        key={option.id}
+                        className={`rounded-xl border px-3 py-2 text-sm ${isCorrect ? "border-emerald-400 bg-emerald-100 text-emerald-900" : isSelected ? "border-red-300 bg-red-100 text-red-900" : "border-slate-200 bg-white text-slate-700"}`}
+                      >
+                        <span className="font-bold">{String.fromCharCode(65 + optionIndex)}. </span>
+                        <span dangerouslySetInnerHTML={{ __html: option.text || "Option" }} />
+                        {isCorrect && <span className="ml-2 font-bold">Correct answer</span>}
+                        {isSelected && !isCorrect && <span className="ml-2 font-bold">Your answer</span>}
+                      </div>
+                    );
+                  })}
+                </div>
                 {item.explanation && (
                   <p className="mt-2 text-sm text-slate-600">
                     {item.explanation}
