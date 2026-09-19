@@ -1,6 +1,6 @@
 import { assetUrl } from "../../services/api";
 
-export default function OptionsGrid({ options, onSelect, revealedOptionId }) {
+export default function OptionsGrid({ options, onSelect, selectedOption, revealedOptionId }) {
   const useTwoColumns = options.length > 1 && options.every((option) => {
     const text = (option.text || "").replace(/<[^>]*>/g, " ").replace(/&[^;]+;/g, " ").replace(/\s+/g, " ").trim();
     return text.length <= 50 && !["audio", "video"].includes(option.mediaType);
@@ -9,8 +9,8 @@ export default function OptionsGrid({ options, onSelect, revealedOptionId }) {
   return <div className="w-full max-w-3xl mx-auto">
     <h1 className="my-4 text-lg sm:text-xl text-black">Select Option</h1>
     <ul className={`grid gap-3 sm:gap-6 mt-4 sm:mt-6 ${useTwoColumns?"grid-cols-2":"grid-cols-1"}`}>
-      {options.map((option) => <li key={option.id} className={`min-w-0 rounded-2xl overflow-hidden bg-white/90 shadow-md ${revealedOptionId===option.id?"ring-4 ring-emerald-400":""}`}>
-        <button type="button" onClick={() => onSelect(option)} className="w-full min-h-32 sm:min-h-44 p-3 sm:p-6 flex justify-center items-center cursor-pointer">
+      {options.map((option) => <li key={option.id} className={`min-w-0 rounded-2xl overflow-hidden bg-white/90 shadow-md transition ${selectedOption?.id===option.id?"ring-4 ring-purple-500 bg-purple-50 scale-[1.02]":"hover:-translate-y-1 hover:shadow-lg"} ${revealedOptionId===option.id?"ring-4 ring-emerald-400":""}`}>
+        <button type="button" aria-pressed={selectedOption?.id===option.id} onClick={() => onSelect(option)} className="w-full min-h-32 sm:min-h-44 p-3 sm:p-6 flex justify-center items-center cursor-pointer active:scale-[.98]">
           <span className="flex min-w-0 flex-col items-center gap-3 text-center text-base font-bold text-gray-800 sm:text-lg"><OptionShape option={option}/><OptionMedia option={option} />{option.text && <span className="rich-content max-w-full break-words" dangerouslySetInnerHTML={{ __html: option.text }}/>}</span>
         </button>
       </li>)}
