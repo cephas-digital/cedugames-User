@@ -30,6 +30,8 @@ button, input, select, textarea { font: inherit; }
 .brand-loader__dots i:nth-child(3) { background: #0177d2; animation-delay: .3s; }
 @keyframes brand-breathe { 50% { transform: translateY(-6px) scale(1.025); } }
 @keyframes brand-dot { to { transform: translateY(-7px); opacity: .55; } }
+@keyframes feedback-correct { 0% { transform: scale(.7) rotate(-8deg); opacity: .3; } 60% { transform: scale(1.15) rotate(4deg); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
+.feedback-icon { animation: feedback-correct .55s cubic-bezier(.2,.8,.2,1); }
 
 .home-start-button {
   animation: home-button-pulse 2s ease-in-out infinite;
@@ -74,7 +76,8 @@ button, input, select, textarea { font: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   .home-start-button,
-  .home-sparkle { animation: none; }
+  .home-sparkle,
+  .feedback-icon { animation: none; }
 }
 
 .app-loading,

@@ -14,6 +14,7 @@ const Signup = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const update = (event) => setForm({ ...form, [event.target.name]: event.target.value });
+  const valid = form.name.trim().length >= 2 && form.username.trim().length >= 3 && form.email.trim() && form.phone.trim().length >= 7 && Number(form.age) >= 1 && Number(form.age) <= 130 && form.password.length >= 10 && form.password === form.confirmPassword;
 
   const submit = async (event) => {
     event.preventDefault();
@@ -56,7 +57,7 @@ const Signup = () => {
               <Input label="Create password" name="password" type="password" value={form.password} onChange={update} required placeholder="At least 10 characters" />
               <Input label="Confirm password" name="confirmPassword" type="password" value={form.confirmPassword} onChange={update} required placeholder="Repeat password" />
             </div>
-            <button disabled={loading} className="w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white disabled:opacity-60">{loading ? "Creating account..." : "Create account"}</button>
+            <button type="submit" disabled={loading || !valid} className="w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white transition hover:bg-[#a947dc] active:scale-[.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-100">{loading ? "Creating account..." : "Create account"}</button>
             <Link to="/login"><p className="text-center font-semibold text-sm mt-4">Already have an account? <span className="text-purple-600">Login</span></p></Link>
           </form>
         </div>

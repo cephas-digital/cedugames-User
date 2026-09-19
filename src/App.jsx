@@ -19,6 +19,7 @@ const Profile = lazy(() => import("./pages/games/profile"));
 const LittleExplorer = lazy(() => import("./pages/selection/LittleExploere"));
 const Home = lazy(() => import("./pages/games/home"));
 const ForgotPassword = lazy(() => import("./pages/auth/forgotPassword"));
+const ChangePassword = lazy(() => import("./pages/auth/changePassword"));
 const Notifications = lazy(() => import("./pages/games/notification"));
 const DailyReward = lazy(() => import("./pages/games/dailyReward"));
 const NotFound = lazy(() => import("./pages/notFound"));
@@ -91,6 +92,7 @@ function App() {
             path="/profile"
             element={<ProtectedRoute><Profile /></ProtectedRoute>}
           />
+          <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
 
           <Route
             path="/shop"
