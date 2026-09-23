@@ -22,7 +22,10 @@ export default function Quiz() {
     navigate = useNavigate(),
     levelId = params.get("level"),
     categoryId = params.get("category"),
-    ageId = params.get("ageGroup");
+    ageId = params.get("ageGroup"),
+    learning = params.get("learning") === "1",
+    programId = params.get("program"),
+    topicId = params.get("topic");
   const [questions, setQuestions] = useState([]),
     [current, setCurrent] = useState(0),
     [answers, setAnswers] = useState([]),
@@ -202,6 +205,7 @@ export default function Quiz() {
         body: JSON.stringify({
           attemptId: crypto.randomUUID(),
           levelId,
+          questionIds: questions.map((item) => item.id),
           answers: finalAnswers,
         }),
       });
@@ -214,10 +218,12 @@ export default function Quiz() {
         max_lives: data.maxLives,
       });
       window.dispatchEvent(new Event("cedugames:wallet-updated"));
-      if (data.passed && categoryId) {
+      if (data.passed && (categoryId || (learning && topicId))) {
         try {
           let levelData;
-          try {
+          if (learning) {
+            levelData = await apiRequest(`/catalog/learning-items?programId=${programId}&parentId=${topicId}`);
+          } else try {
             levelData = await apiRequest(
               `/gameplay/categories/${categoryId}/levels`,
             );
@@ -227,7 +233,7 @@ export default function Quiz() {
               `/catalog/categories/${categoryId}/levels`,
             );
           }
-          const ordered = levelData.levels || [],
+          const ordered = levelData.levels || levelData.items || [],
             index = ordered.findIndex((level) => level.id === levelId);
           setNextLevelId(ordered[index + 1]?.id || "");
         } catch {
@@ -309,7 +315,9 @@ export default function Quiz() {
     setError("");
     setLoading(true);
     navigate(
-      `/quiz?ageGroup=${ageId || ""}&category=${categoryId || ""}&level=${nextLevelId}`,
+      learning
+        ? `/quiz?level=${nextLevelId}&learning=1&program=${programId || ""}&topic=${topicId || ""}`
+        : `/quiz?ageGroup=${ageId || ""}&category=${categoryId || ""}&level=${nextLevelId}`,
     );
   };
   const used = (key) => usedActions.includes(`${question?.id}:${key}`),
@@ -355,11 +363,7 @@ export default function Quiz() {
             nextLevelId={nextLevelId}
             onNext={playNext}
             onRetry={retry}
-            onHome={() =>
-              navigate(
-                `/play?ageGroup=${ageId || ""}&category=${categoryId || ""}`,
-              )
-            }
+            onHome={() => navigate(learning ? `/learn?program=${programId || ""}&parent=${topicId || ""}&type=level` : `/play?ageGroup=${ageId || ""}&category=${categoryId || ""}`)}
             onShop={() => navigate("/shop")}
           />
         ) : !question ? (
