@@ -65,14 +65,14 @@ function Spinner({ label = "Loading" }) {
 function Stat({ image, label, value, color }) {
   return (
     <article
-      className={`flex min-w-0 items-center gap-3 rounded-2xl p-3 sm:p-4 ${color}`}
+      className={`flex min-w-0 items-center gap-2 rounded-2xl p-3 sm:gap-3 sm:p-4 ${color}`}
     >
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white sm:h-14 sm:w-14">
-        <img src={image} alt="" className="h-8 w-8 object-contain" />
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white sm:h-14 sm:w-14">
+        <img src={image} alt="" className="h-7 w-7 object-contain sm:h-8 sm:w-8" />
       </span>
       <div className="min-w-0">
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="truncate text-lg font-black text-slate-900 sm:text-xl">
+        <p className="truncate text-[11px] leading-4 text-slate-500 sm:text-xs">{label}</p>
+        <p className="truncate text-base font-black text-slate-900 sm:text-xl">
           {value}
         </p>
       </div>
@@ -332,7 +332,7 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-              <div className="mx-auto mt-7 grid max-w-4xl grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:grid-cols-4">
+              <div className="mx-auto mt-7 grid max-w-4xl grid-cols-2 gap-3 lg:grid-cols-4">
                 <Stat
                   image={Trophy}
                   label="Total XP"
