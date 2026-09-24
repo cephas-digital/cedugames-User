@@ -1,7 +1,7 @@
 import logo from "../assets/cedugames-logo.png";
 
 export function BrandLogo({ className = "", priority = false }) {
-  return <img src={logo} alt="Cedugames" className={`object-contain ${className}`} fetchPriority={priority ? "high" : "auto"} />;
+  return <img src={logo} alt="CEDU" className={`object-contain ${className}`} fetchPriority={priority ? "high" : "auto"} />;
 }
 
 export function BrandLoader({ message = "Loading fun…", fullScreen = false }) {
