@@ -27,13 +27,27 @@ function scheduleSessionExpiry(token) {
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem(TOKEN_KEY);
   const isFormData = options.body instanceof FormData;
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers: { ...(!isFormData ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } });
-  const data = await response.json().catch(() => ({}));
-  // Any unauthorized response means the bearer session is no longer usable
-  // (expired, revoked, or invalid). Clear it immediately and return to login.
-  if (response.status === 401 && token) returnToLogin();
-  if (!response.ok) throw new Error(data.errors?.[0]?.message || data.message || "Something went wrong.");
-  return data;
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 30000);
+  const abort = () => controller.abort();
+  options.signal?.addEventListener("abort", abort, { once: true });
+
+  try {
+    const response = await fetch(`${API_URL}${path}`, { ...options, signal: controller.signal, headers: { ...(!isFormData ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } });
+    const data = await response.json().catch(() => ({}));
+    // Any unauthorized response means the bearer session is no longer usable
+    // (expired, revoked, or invalid). Clear it immediately and return to login.
+    if (response.status === 401 && token) returnToLogin();
+    if (!response.ok) throw new Error(data.errors?.[0]?.message || data.message || "Something went wrong.");
+    return data;
+  } catch (error) {
+    if (timedOut) throw new Error("The server took too long to respond. Please try again.");
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+    options.signal?.removeEventListener("abort", abort);
+  }
 }
 export function saveSession(token, user) {
   localStorage.setItem(TOKEN_KEY, token);
