@@ -334,6 +334,12 @@ export default function Profile() {
                   >
                     Change password
                   </button>
+                  <button
+                    onClick={() => setConfirmLogout(true)}
+                    className="rounded-full border border-red-200 bg-red-50 px-6 py-2.5 text-sm font-bold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-100"
+                  >
+                    Log out
+                  </button>
                 </div>
               </div>
               <div className="mx-auto mt-7 grid max-w-4xl grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:grid-cols-4">
