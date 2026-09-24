@@ -11,6 +11,8 @@ const Signup = lazy(() => import("./pages/auth/sign-up"));
 const VerifyCard = lazy(() => import("./pages/auth/verification"));
 const Quiz = lazy(() => import("./components/quiz/quiz"));
 const AgeSelection = lazy(() => import("./pages/selection/ageSelection"));
+const ProgramSelection = lazy(() => import("./pages/selection/programSelection"));
+const LearnExplorer = lazy(() => import("./pages/selection/learnExplorer"));
 const LevelSelection = lazy(() => import("./pages/selection/levelSelection"));
 const LeaderBoard = lazy(() => import("./pages/games/leaderboard"));
 const Shop = lazy(() => import("./pages/games/shop"));
@@ -45,8 +47,10 @@ function App() {
 
           <Route
             path="/age-selection"
-            element={<ProtectedRoute><AgeSelection /></ProtectedRoute>}
+            element={<ProtectedRoute><ProgramSelection /></ProtectedRoute>}
           />
+          <Route path="/age-selection/games" element={<ProtectedRoute><AgeSelection /></ProtectedRoute>} />
+          <Route path="/learn" element={<ProtectedRoute><LearnExplorer /></ProtectedRoute>} />
 
           <Route
             path="/age-selection/little-explore"
