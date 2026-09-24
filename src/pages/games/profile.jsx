@@ -41,6 +41,15 @@ const tierColor = {
   gold: "bg-yellow-100 text-yellow-800",
   platinum: "bg-violet-100 text-violet-700",
 };
+function ActionIcon({ name, size = 18 }) {
+  const paths = {
+    pencil: <><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></>,
+    camera: <><path d="M14.5 4 16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l1.5-3Z"/><circle cx="12" cy="13" r="3"/></>,
+    shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></>,
+    logout: <><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+}
 
 function Spinner({ label = "Loading" }) {
   return (
@@ -283,7 +292,8 @@ export default function Profile() {
                 </div>
               )}
               <div className="flex flex-col items-center text-center">
-                <div className="grid h-28 w-28 overflow-hidden rounded-full border-4 border-purple-400 bg-purple-100 text-5xl font-black text-purple-700 shadow-sm sm:h-36 sm:w-36">
+                <div className="relative">
+                <div className="grid h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-purple-100 text-5xl font-black text-purple-700 shadow-[0_0_0_4px_#c084fc] sm:h-36 sm:w-36">
                   {user.profile_image_url ? (
                     <img
                       src={assetUrl(user.profile_image_url)}
@@ -296,49 +306,29 @@ export default function Profile() {
                     </span>
                   )}
                 </div>
-                <h1 className="mt-4 text-xl font-black text-slate-900 sm:text-2xl">
+                <button type="button" onClick={() => setEditing(true)} aria-label="Edit profile" title="Edit profile" className="absolute bottom-0 right-0 grid h-10 w-10 place-items-center rounded-full border-4 border-white bg-purple-600 text-white shadow-lg transition hover:scale-105 hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-purple-200 sm:h-11 sm:w-11"><ActionIcon name="pencil" size={17}/></button>
+                </div>
+                <h1 className="mt-5 text-xl font-black text-slate-900 sm:text-2xl">
                   {user.name}
                 </h1>
                 <p className="text-sm text-slate-500">
                   @{user.username} · {user.email}
                 </p>
-                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  <label
-                    className={`cursor-pointer rounded-full border border-purple-200 bg-purple-50 px-5 py-2.5 text-sm font-bold text-purple-700 shadow-sm hover:bg-purple-100 ${uploadingImage ? "pointer-events-none opacity-60" : ""}`}
-                  >
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      className="sr-only"
-                      onChange={uploadProfileImage}
-                      disabled={uploadingImage}
-                    />
-                    {uploadingImage
-                      ? "Uploading…"
-                      : user.profile_image_url
-                        ? "Change picture"
-                        : "Add picture"}
-                  </label>
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="rounded-full bg-purple-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-purple-700"
-                  >
-                    Edit profile
-                  </button>
+                <div className="mt-5 grid w-full max-w-md grid-cols-1 gap-3 min-[380px]:grid-cols-2">
                   <button
                     onClick={() => {
                       setPasswordError("");
                       setChangingPassword(true);
                     }}
-                    className="rounded-full border border-purple-200 bg-white px-6 py-2.5 text-sm font-bold text-purple-700 shadow-sm hover:bg-purple-50"
+                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-5 py-3 text-sm font-bold text-purple-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-100"
                   >
-                    Change password
+                    <ActionIcon name="shield"/>Change password
                   </button>
                   <button
                     onClick={() => setConfirmLogout(true)}
-                    className="rounded-full border border-red-200 bg-red-50 px-6 py-2.5 text-sm font-bold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-100"
+                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-bold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-100"
                   >
-                    Log out
+                    <ActionIcon name="logout"/>Log out
                   </button>
                 </div>
               </div>
@@ -515,14 +505,6 @@ export default function Profile() {
                   </div>
                 )}
               </section>
-              <div className="mt-10 flex justify-center border-t border-slate-100 pt-6 sm:justify-end">
-                <button
-                  onClick={() => setConfirmLogout(true)}
-                  className="w-full rounded-full border border-red-200 bg-red-50 px-8 py-3 text-sm font-bold text-red-600 sm:w-auto"
-                >
-                  Log out
-                </button>
-              </div>
             </div>
           )}
         </section>
@@ -551,6 +533,15 @@ export default function Profile() {
               >
                 ×
               </button>
+            </div>
+            <div className="mt-6 flex items-center gap-3 rounded-2xl border border-purple-100 bg-purple-50/70 p-3 sm:gap-4 sm:p-4">
+              <div className="grid h-14 w-14 shrink-0 overflow-hidden rounded-full bg-purple-100 text-xl font-black text-purple-700 sm:h-16 sm:w-16">
+                {user.profile_image_url ? <img src={assetUrl(user.profile_image_url)} alt="" className="h-full w-full object-cover"/> : <span className="grid h-full w-full place-items-center">{user.name?.[0]?.toUpperCase() || "P"}</span>}
+              </div>
+              <div className="min-w-0 flex-1 text-left"><p className="font-bold text-slate-800">Profile picture</p><p className="mt-0.5 text-xs leading-5 text-slate-500">JPEG, PNG, GIF or WebP. Maximum 10 MB.</p></div>
+              <label className={`grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-xl bg-white text-purple-700 shadow-sm transition hover:bg-purple-100 ${uploadingImage ? "pointer-events-none opacity-50" : ""}`} title="Change profile picture">
+                <ActionIcon name="camera"/><span className="sr-only">Change profile picture</span><input type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="sr-only" onChange={uploadProfileImage} disabled={uploadingImage}/>
+              </label>
             </div>
             <label className="mt-6 block text-sm font-bold">
               Display name
