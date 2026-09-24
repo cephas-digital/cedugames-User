@@ -132,7 +132,7 @@ export default function Quiz() {
     if (!result || result.breakdown || !levelId) return;
     apiRequest("/gameplay/review", {
       method: "POST",
-      body: JSON.stringify({ levelId, answers }),
+      body: JSON.stringify({ levelId, questionIds: questions.map((item) => item.id), answers }),
     })
       .then((review) =>
         setResult((currentResult) => ({
