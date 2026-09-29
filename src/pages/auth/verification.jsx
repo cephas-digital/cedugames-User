@@ -13,26 +13,31 @@ function VerifyCard() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const email = state?.email || "";
   const purpose = state?.purpose || "register";
 
   const verify = async () => {
-    if (!email) return setError("Your verification session is missing. Please register again.");
+    if (!email) return setError(purpose === "password_reset" ? "Your reset session is missing. Request a new code to continue." : "Your verification session is missing. Please register again.");
     setLoading(true); setError("");
     try {
       const data = await apiRequest("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email, otp: otp.join(""), purpose }) });
       if (purpose === "register") navigate("/login", { replace: true, state: { message: data.message } });
-      else navigate("/reset-password", { state: { resetToken: data.resetToken } });
+      else if (data.resetToken) navigate("/reset-password", { replace: true, state: { resetToken: data.resetToken } });
+      else throw new Error("A password reset session could not be created. Please verify the code again.");
     } catch (requestError) { setError(requestError.message); }
     finally { setLoading(false); }
   };
 
   const resend = async () => {
-    setError("");
+    if (!email) return setError("Your verification session is missing. Request a new code to continue.");
+    setError(""); setMessage(""); setResending(true);
     try {
       const data = await apiRequest("/auth/resend-otp", { method: "POST", body: JSON.stringify({ email, purpose }) });
+      setOtp(["", "", "", "", "", ""]);
       setMessage(data.message);
     } catch (requestError) { setError(requestError.message); }
+    finally { setResending(false); }
   };
 
   return (
@@ -44,8 +49,9 @@ function VerifyCard() {
         {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
         {message && <p className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{message}</p>}
         <OTPInput otp={otp} setOtp={setOtp} />
-        <button onClick={verify} disabled={loading || otp.join("").length !== 6} className="mt-6 w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white disabled:opacity-60">{loading ? "Verifying..." : "Verify code"}</button>
-        <button onClick={resend} className="mt-4 text-sm text-purple-500">Resend code</button>
+        <button onClick={verify} disabled={loading || !email || otp.join("").length !== 6} className="mt-6 w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">{loading ? "Verifying..." : "Verify code"}</button>
+        <button onClick={resend} disabled={loading || resending || !email} className="mt-4 text-sm text-purple-500 disabled:cursor-not-allowed disabled:opacity-50">{resending ? "Sending..." : "Resend code"}</button>
+        {!email && <Link to={purpose === "password_reset" ? "/forgot-password" : "/sign-up"} className="mt-4 inline-block text-sm font-bold text-purple-600">{purpose === "password_reset" ? "Request a new reset code" : "Create an account"}</Link>}
       </div></AuthCard>
     </div>
   );

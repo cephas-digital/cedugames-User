@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "../../components/homeNavbar";
 import Coin from "../../assets/coin.png";
 import CoinHeader from "../../assets/coin-header.png";
-import { apiRequest, isSignedIn } from "../../services/api";
+import { apiRequest, getCachedUser, isSignedIn } from "../../services/api";
 import { AirtimePanel } from "./airtime";
 
 const money = (minor, currency) =>
@@ -22,6 +22,8 @@ const transactionDetail = (item) =>
     : item.reference;
 
 export default function CoinShop() {
+  const cachedPlayer = getCachedUser();
+  const canPurchaseCoins = !cachedPlayer?.parent_user_id && cachedPlayer?.isPrimary !== false;
   const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get("tab") === "airtime" ? "airtime" : "packages");
   const [packages, setPackages] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -151,6 +153,7 @@ export default function CoinShop() {
             </div>
           )}
           {activeTab !== "airtime" && notice && <div role="status" className="mb-6 rounded-xl bg-emerald-50 p-4 text-emerald-700">{notice}</div>}
+          {activeTab === "packages" && !canPurchaseCoins && <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">For parental safety, real-money coin purchases are available only from the main household profile. Return Home and choose the main profile to purchase.</div>}
           {activeTab === "airtime" ? <AirtimePanel/> : loading ? (
             <div className="py-20 text-center text-gray-500">
               Loading your coin shop…
@@ -182,11 +185,11 @@ export default function CoinShop() {
                       )}
                       <button
                         type="button"
-                        disabled={Boolean(buying)}
+                        disabled={Boolean(buying) || !canPurchaseCoins}
                         onClick={() => purchase(pkg.id)}
                         className="mt-5 w-full cursor-pointer rounded-full bg-[#9B5DE5] px-4 py-2 font-bold text-white disabled:cursor-wait disabled:opacity-60"
                       >
-                        {buying === pkg.id ? "Opening secure checkout…" : `Buy for ${money(pkg.price_minor, pkg.currency)}`}
+                        {buying === pkg.id ? "Opening secure checkout…" : canPurchaseCoins ? `Buy for ${money(pkg.price_minor, pkg.currency)}` : "Main profile required"}
                       </button>
                     </article>
                   ))}

@@ -1,10 +1,11 @@
-export function Button({ text, type = "button" }) {
+export function Button({ text, type = "button", disabled = false }) {
   return (
     <button
       type={type}
+      disabled={disabled}
       className="w-full py-3 cursor-pointer rounded-full text-white font-medium 
       bg-gradient-to-r from-purple-500 to-purple-600 
-      hover:opacity-90 transition"
+      hover:opacity-90 transition disabled:cursor-not-allowed disabled:opacity-60"
     >
       {text}
     </button>

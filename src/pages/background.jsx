@@ -12,7 +12,7 @@ export default function Background() {
   useEffect(() => {
     const frame = requestAnimationFrame(() => setProgress(100));
     const timer = window.setTimeout(
-      () => navigate(isSignedIn() ? "/age-selection" : "/login"),
+      () => navigate(isSignedIn() ? "/profiles" : "/login"),
       850,
     );
     return () => {

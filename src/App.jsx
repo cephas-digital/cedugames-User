@@ -12,6 +12,7 @@ const VerifyCard = lazy(() => import("./pages/auth/verification"));
 const Quiz = lazy(() => import("./components/quiz/quiz"));
 const AgeSelection = lazy(() => import("./pages/selection/ageSelection"));
 const ProgramSelection = lazy(() => import("./pages/selection/programSelection"));
+const PlayerProfiles = lazy(() => import("./pages/selection/playerProfiles"));
 const LearnExplorer = lazy(() => import("./pages/selection/learnExplorer"));
 const LevelSelection = lazy(() => import("./pages/selection/levelSelection"));
 const LeaderBoard = lazy(() => import("./pages/games/leaderboard"));
@@ -49,6 +50,7 @@ function App() {
             path="/age-selection"
             element={<ProtectedRoute><ProgramSelection /></ProtectedRoute>}
           />
+          <Route path="/profiles" element={<ProtectedRoute><PlayerProfiles /></ProtectedRoute>} />
           <Route path="/age-selection/games" element={<ProtectedRoute><AgeSelection /></ProtectedRoute>} />
           <Route path="/learn" element={<ProtectedRoute><LearnExplorer /></ProtectedRoute>} />
 
