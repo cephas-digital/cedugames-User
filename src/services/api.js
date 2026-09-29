@@ -42,7 +42,7 @@ export async function apiRequest(path, options = {}) {
   options.signal?.addEventListener("abort", abort, { once: true });
 
   try {
-    const activeProfileId = accountContext ? currentAccountId() : localStorage.getItem(ACTIVE_PROFILE_KEY);
+    const activeProfileId = accountContext ? currentAccountId() : sessionStorage.getItem(ACTIVE_PROFILE_KEY) || localStorage.getItem(ACTIVE_PROFILE_KEY);
     const response = await fetch(`${API_URL}${path}`, { ...requestOptions, signal: controller.signal, headers: { ...(!isFormData ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(token && activeProfileId ? { "X-Player-Profile-Id": activeProfileId } : {}), ...options.headers } });
     const data = await response.json().catch(() => ({}));
     // Any unauthorized response means the bearer session is no longer usable
@@ -60,20 +60,29 @@ export async function apiRequest(path, options = {}) {
 }
 export function saveSession(token, user) {
   localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  sessionStorage.setItem(USER_KEY, JSON.stringify(user));
   localStorage.setItem(ACCOUNT_KEY, JSON.stringify(user));
-  localStorage.setItem(ACTIVE_PROFILE_KEY, user.id);
+  sessionStorage.setItem(ACTIVE_PROFILE_KEY, user.id);
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(ACTIVE_PROFILE_KEY);
   scheduleSessionExpiry(token);
 }
 export function selectPlayerProfile(profile) {
-  localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
-  localStorage.setItem(USER_KEY, JSON.stringify(profile));
+  sessionStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+  sessionStorage.setItem(USER_KEY, JSON.stringify(profile));
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(ACTIVE_PROFILE_KEY);
   window.dispatchEvent(new Event("cedugames:profile-updated"));
   window.dispatchEvent(new Event("cedugames:wallet-updated"));
 }
-export const getActiveProfileId = () => localStorage.getItem(ACTIVE_PROFILE_KEY);
+export const getActiveProfileId = () => sessionStorage.getItem(ACTIVE_PROFILE_KEY) || localStorage.getItem(ACTIVE_PROFILE_KEY);
+export function getCachedUser() {
+  try { return JSON.parse(sessionStorage.getItem(USER_KEY) || localStorage.getItem(USER_KEY) || "null"); }
+  catch { return null; }
+}
 export function updateCachedUser(user) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.removeItem(USER_KEY);
   window.dispatchEvent(new Event("cedugames:profile-updated"));
 }
 export function clearSession() {
@@ -82,6 +91,8 @@ export function clearSession() {
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(ACCOUNT_KEY);
   localStorage.removeItem(ACTIVE_PROFILE_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(ACTIVE_PROFILE_KEY);
   localStorage.removeItem(SELECTIONS_KEY);
   localStorage.removeItem(WALLETS_KEY);
 }
@@ -90,8 +101,7 @@ export const isSignedIn = () => Boolean(localStorage.getItem(TOKEN_KEY));
 scheduleSessionExpiry(localStorage.getItem(TOKEN_KEY));
 
 function currentUserId() {
-  try { return JSON.parse(localStorage.getItem(USER_KEY) || "null")?.id || null; }
-  catch { return null; }
+  return getCachedUser()?.id || null;
 }
 
 export function getLearningSelection() {

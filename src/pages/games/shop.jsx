@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "../../components/homeNavbar";
 import Coin from "../../assets/coin.png";
 import CoinHeader from "../../assets/coin-header.png";
-import { apiRequest, isSignedIn, USER_KEY } from "../../services/api";
+import { apiRequest, getCachedUser, isSignedIn } from "../../services/api";
 import { AirtimePanel } from "./airtime";
 
 const money = (minor, currency) =>
@@ -22,8 +22,7 @@ const transactionDetail = (item) =>
     : item.reference;
 
 export default function CoinShop() {
-  let cachedPlayer = null;
-  try { cachedPlayer = JSON.parse(localStorage.getItem(USER_KEY) || "null"); } catch { cachedPlayer = null; }
+  const cachedPlayer = getCachedUser();
   const canPurchaseCoins = !cachedPlayer?.parent_user_id && cachedPlayer?.isPrimary !== false;
   const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get("tab") === "airtime" ? "airtime" : "packages");
   const [packages, setPackages] = useState([]);

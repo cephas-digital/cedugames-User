@@ -2,7 +2,7 @@ import {useEffect,useState} from "react";
 import {useLocation,useNavigate} from "react-router-dom";
 import NavItem from "./NavItem";
 import Badge from "./badge";
-import {apiRequest,assetUrl,cacheLearningSelection,cacheWallet,getCachedWallet,isSignedIn,USER_KEY} from "../services/api";
+import {apiRequest,assetUrl,cacheLearningSelection,cacheWallet,getCachedUser,getCachedWallet,isSignedIn,USER_KEY} from "../services/api";
 
 const iconPaths={
  home:<><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></>,
@@ -14,10 +14,10 @@ const iconPaths={
 function NavIcon({name}){return <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{iconPaths[name]}</svg>}
 
 export default function Navbar(){
- const location=useLocation(),navigate=useNavigate(),[wallet,setWallet]=useState(()=>getCachedWallet()),[user,setUser]=useState(()=>JSON.parse(localStorage.getItem(USER_KEY)||"null")),[unread,setUnread]=useState(0);
- useEffect(()=>{if(!isSignedIn())return undefined;let live=true;apiRequest("/auth/user/dashboard-bootstrap").then(data=>{if(!live)return;cacheWallet(data.wallet);setWallet(data.wallet);setUnread(Number(data.unreadCount||0));if(data.learningSelection)cacheLearningSelection(data.learningSelection);if(data.user){localStorage.setItem(USER_KEY,JSON.stringify(data.user));setUser(data.user)}}).catch(()=>undefined);return()=>{live=false}},[]);
+ const location=useLocation(),navigate=useNavigate(),[wallet,setWallet]=useState(()=>getCachedWallet()),[user,setUser]=useState(()=>getCachedUser()),[unread,setUnread]=useState(0);
+ useEffect(()=>{if(!isSignedIn())return undefined;let live=true;apiRequest("/auth/user/dashboard-bootstrap").then(data=>{if(!live)return;cacheWallet(data.wallet);setWallet(data.wallet);setUnread(Number(data.unreadCount||0));if(data.learningSelection)cacheLearningSelection(data.learningSelection);if(data.user){sessionStorage.setItem(USER_KEY,JSON.stringify(data.user));setUser(data.user)}}).catch(()=>undefined);return()=>{live=false}},[]);
  useEffect(()=>{if(!isSignedIn())return undefined;let live=true;const load=()=>apiRequest("/gameplay/status").then(data=>{cacheWallet(data);if(live)setWallet(data)}).catch(()=>undefined);window.addEventListener("cedugames:wallet-updated",load);return()=>{live=false;window.removeEventListener("cedugames:wallet-updated",load)}},[]);
- useEffect(()=>{const loadUser=()=>setUser(JSON.parse(localStorage.getItem(USER_KEY)||"null"));window.addEventListener("cedugames:profile-updated",loadUser);return()=>window.removeEventListener("cedugames:profile-updated",loadUser)},[]);
+ useEffect(()=>{const loadUser=()=>setUser(getCachedUser());window.addEventListener("cedugames:profile-updated",loadUser);return()=>window.removeEventListener("cedugames:profile-updated",loadUser)},[]);
  useEffect(()=>{if(!isSignedIn())return undefined;let live=true;const load=()=>apiRequest("/notifications?limit=1").then(data=>{if(live)setUnread(Number(data.unreadCount||0))}).catch(()=>undefined);window.addEventListener("cedugames:notifications-updated",load);return()=>{live=false;window.removeEventListener("cedugames:notifications-updated",load)}},[]);
  const navItems=[{label:"Home",shortLabel:"Home",icon:"home",to:"/profiles"},{label:"Daily reward",shortLabel:"Reward",icon:"gift",to:"/daily-reward"},{label:"Leaderboard",shortLabel:"Leaders",icon:"trophy",to:"/leaderboard"},{label:"Shop",shortLabel:"Shop",icon:"shop",to:"/shop"},{label:"Profile",shortLabel:"Profile",icon:"user",to:"/profile"}];
  const white=["/leaderboard","/shop","/profile","/notification","/daily-reward"].includes(location.pathname),text=white?"text-black":"text-white",bg=white?"bg-white":"bg-gradient-to-r from-purple-700/95 via-violet-600/95 to-fuchsia-600/90 backdrop-blur-md";
