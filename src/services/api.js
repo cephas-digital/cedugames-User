@@ -2,9 +2,16 @@ const API_URL = (import.meta.env.VITE_API_URL || "https://cedugames-backend.onre
 export const assetUrl = (value) => value?.startsWith("/") ? `${API_URL}${value}` : value;
 export const TOKEN_KEY = "cedugames_user_token";
 export const USER_KEY = "cedugames_user";
+export const ACCOUNT_KEY = "cedugames_household_account";
+export const ACTIVE_PROFILE_KEY = "cedugames_active_profile_id";
 const SELECTIONS_KEY = "cedugames_learning_selections";
 const WALLETS_KEY = "cedugames_wallet_states";
 let expiryTimer;
+
+function currentAccountId() {
+  try { return JSON.parse(localStorage.getItem(ACCOUNT_KEY) || "null")?.id || null; }
+  catch { return null; }
+}
 
 function returnToLogin() {
   clearSession();
@@ -26,6 +33,7 @@ function scheduleSessionExpiry(token) {
 
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem(TOKEN_KEY);
+  const { accountContext = false, ...requestOptions } = options;
   const isFormData = options.body instanceof FormData;
   const controller = new AbortController();
   let timedOut = false;
@@ -34,7 +42,8 @@ export async function apiRequest(path, options = {}) {
   options.signal?.addEventListener("abort", abort, { once: true });
 
   try {
-    const response = await fetch(`${API_URL}${path}`, { ...options, signal: controller.signal, headers: { ...(!isFormData ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } });
+    const activeProfileId = accountContext ? currentAccountId() : localStorage.getItem(ACTIVE_PROFILE_KEY);
+    const response = await fetch(`${API_URL}${path}`, { ...requestOptions, signal: controller.signal, headers: { ...(!isFormData ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(token && activeProfileId ? { "X-Player-Profile-Id": activeProfileId } : {}), ...options.headers } });
     const data = await response.json().catch(() => ({}));
     // Any unauthorized response means the bearer session is no longer usable
     // (expired, revoked, or invalid). Clear it immediately and return to login.
@@ -52,8 +61,17 @@ export async function apiRequest(path, options = {}) {
 export function saveSession(token, user) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem(ACCOUNT_KEY, JSON.stringify(user));
+  localStorage.setItem(ACTIVE_PROFILE_KEY, user.id);
   scheduleSessionExpiry(token);
 }
+export function selectPlayerProfile(profile) {
+  localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+  localStorage.setItem(USER_KEY, JSON.stringify(profile));
+  window.dispatchEvent(new Event("cedugames:profile-updated"));
+  window.dispatchEvent(new Event("cedugames:wallet-updated"));
+}
+export const getActiveProfileId = () => localStorage.getItem(ACTIVE_PROFILE_KEY);
 export function updateCachedUser(user) {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
   window.dispatchEvent(new Event("cedugames:profile-updated"));
@@ -62,6 +80,10 @@ export function clearSession() {
   window.clearTimeout(expiryTimer);
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(ACCOUNT_KEY);
+  localStorage.removeItem(ACTIVE_PROFILE_KEY);
+  localStorage.removeItem(SELECTIONS_KEY);
+  localStorage.removeItem(WALLETS_KEY);
 }
 export const isSignedIn = () => Boolean(localStorage.getItem(TOKEN_KEY));
 
