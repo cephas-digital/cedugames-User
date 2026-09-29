@@ -8,6 +8,14 @@ const SELECTIONS_KEY = "cedugames_learning_selections";
 const WALLETS_KEY = "cedugames_wallet_states";
 let expiryTimer;
 
+function getSessionToken() {
+  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+}
+
+function getSessionStorage() {
+  return localStorage.getItem(TOKEN_KEY) ? localStorage : sessionStorage;
+}
+
 function currentAccountId() {
   try { return JSON.parse(localStorage.getItem(ACCOUNT_KEY) || "null")?.id || null; }
   catch { return null; }
@@ -32,7 +40,7 @@ function scheduleSessionExpiry(token) {
 }
 
 export async function apiRequest(path, options = {}) {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = getSessionToken();
   const { accountContext = false, ...requestOptions } = options;
   const isFormData = options.body instanceof FormData;
   const controller = new AbortController();
@@ -58,20 +66,25 @@ export async function apiRequest(path, options = {}) {
     options.signal?.removeEventListener("abort", abort);
   }
 }
-export function saveSession(token, user) {
-  localStorage.setItem(TOKEN_KEY, token);
-  sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+export function saveSession(token, user, rememberMe = false) {
+  const storage = rememberMe ? localStorage : sessionStorage;
+  const otherStorage = rememberMe ? sessionStorage : localStorage;
+  otherStorage.removeItem(TOKEN_KEY);
+  otherStorage.removeItem(USER_KEY);
+  otherStorage.removeItem(ACTIVE_PROFILE_KEY);
+  storage.setItem(TOKEN_KEY, token);
+  storage.setItem(USER_KEY, JSON.stringify(user));
   localStorage.setItem(ACCOUNT_KEY, JSON.stringify(user));
-  sessionStorage.setItem(ACTIVE_PROFILE_KEY, user.id);
-  localStorage.removeItem(USER_KEY);
-  localStorage.removeItem(ACTIVE_PROFILE_KEY);
+  storage.setItem(ACTIVE_PROFILE_KEY, user.id);
   scheduleSessionExpiry(token);
 }
 export function selectPlayerProfile(profile) {
-  sessionStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
-  sessionStorage.setItem(USER_KEY, JSON.stringify(profile));
-  localStorage.removeItem(USER_KEY);
-  localStorage.removeItem(ACTIVE_PROFILE_KEY);
+  const storage = getSessionStorage();
+  const otherStorage = storage === localStorage ? sessionStorage : localStorage;
+  storage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+  storage.setItem(USER_KEY, JSON.stringify(profile));
+  otherStorage.removeItem(USER_KEY);
+  otherStorage.removeItem(ACTIVE_PROFILE_KEY);
   window.dispatchEvent(new Event("cedugames:profile-updated"));
   window.dispatchEvent(new Event("cedugames:wallet-updated"));
 }
@@ -81,13 +94,16 @@ export function getCachedUser() {
   catch { return null; }
 }
 export function updateCachedUser(user) {
-  sessionStorage.setItem(USER_KEY, JSON.stringify(user));
-  localStorage.removeItem(USER_KEY);
+  const storage = getSessionStorage();
+  const otherStorage = storage === localStorage ? sessionStorage : localStorage;
+  storage.setItem(USER_KEY, JSON.stringify(user));
+  otherStorage.removeItem(USER_KEY);
   window.dispatchEvent(new Event("cedugames:profile-updated"));
 }
 export function clearSession() {
   window.clearTimeout(expiryTimer);
   localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(ACCOUNT_KEY);
   localStorage.removeItem(ACTIVE_PROFILE_KEY);
@@ -96,9 +112,9 @@ export function clearSession() {
   localStorage.removeItem(SELECTIONS_KEY);
   localStorage.removeItem(WALLETS_KEY);
 }
-export const isSignedIn = () => Boolean(localStorage.getItem(TOKEN_KEY));
+export const isSignedIn = () => Boolean(getSessionToken());
 
-scheduleSessionExpiry(localStorage.getItem(TOKEN_KEY));
+scheduleSessionExpiry(getSessionToken());
 
 function currentUserId() {
   return getCachedUser()?.id || null;
