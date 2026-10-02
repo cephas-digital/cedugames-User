@@ -1,12 +1,12 @@
 import { useState } from "react";
 
-function PasswordInput({ id, label, name, placeholder, value, onChange, autoComplete = "new-password" }) {
+function PasswordInput({ id, label, name, placeholder, value, onChange, minLength = 8, autoComplete = "new-password" }) {
   const [show, setShow] = useState(false);
   const inputId = id || name || label.toLowerCase().replace(/\s+/g, "-");
 
   return (
     <div className="w-full space-y-2">
-      <label htmlFor={inputId} className="text-sm text-gray-700">{label}</label>
+      <label htmlFor={inputId} className="text-sm text-gray-700">{label}<span className="ml-1 text-red-500" aria-hidden="true">*</span></label>
 
       <div className="flex items-center border w-full border-[#E2E8F0] bg-[#F8FAFC] rounded-2xl px-6 py-3 outline-none focus:ring-2 focus:ring-purple-400">
         <input
@@ -16,7 +16,7 @@ function PasswordInput({ id, label, name, placeholder, value, onChange, autoComp
           value={value}
           onChange={onChange}
           required
-          minLength={10}
+          minLength={minLength}
           maxLength={128}
           autoComplete={autoComplete}
           placeholder={placeholder}
@@ -26,6 +26,7 @@ function PasswordInput({ id, label, name, placeholder, value, onChange, autoComp
         <button
           type="button"
           onClick={() => setShow((visible) => !visible)}
+          aria-pressed={show}
           aria-label={show ? "Hide password" : "Show password"}
           className="text-gray-400 hover:text-purple-600"
         >
