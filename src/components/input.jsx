@@ -1,10 +1,11 @@
-function Input({ label, type = "text", placeholder, name, value, onChange, required, min, max }) {
+function Input({ label, type = "text", inputMode, placeholder, name, value, onChange, required, min, max }) {
   return (
     <div className="flex flex-col gap-2 w-full">
       <label className="text-sm text-gray-600">{label}{required && <span className="ml-1 text-red-500" aria-hidden="true">*</span>}</label>
 
       <input
         type={type}
+        inputMode={inputMode}
         name={name}
         value={value}
         onChange={onChange}

@@ -53,7 +53,7 @@ const Signup = () => {
               <Input label="Full name" name="name" value={form.name} onChange={update} required placeholder="Jane Doe" />
               <Input label="Username" name="username" value={form.username} onChange={update} required placeholder="janedoe123" />
               <Input label="Email" name="email" type="email" value={form.email} onChange={update} required placeholder="example@mail.com" />
-              <Input label="Phone number" name="phone" type="tel" value={form.phone} onChange={update} required placeholder="+2348012345678" />
+              <Input label="Phone number" name="phone" type="tel" inputMode="numeric" value={form.phone} onChange={update} required placeholder="08012345678" />
               <Input label="Age" name="age" type="number" min="1" max="130" value={form.age} onChange={update} required placeholder="10" />
               <PasswordInput label="Create password" name="password" value={form.password} onChange={update} minLength={8} placeholder="At least 8 characters" />
               <PasswordInput label="Confirm password" name="confirmPassword" value={form.confirmPassword} onChange={update} minLength={8} placeholder="Repeat password" />

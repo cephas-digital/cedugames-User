@@ -33,7 +33,7 @@ function Login() {
         {state?.message && <p className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{state.message}</p>}
         {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
         <div className="flex flex-col gap-4">
-          <Input label="Email or phone number" name="identifier" value={form.identifier} onChange={update} required placeholder="you@example.com or +2348012345678" />
+          <Input label="Email or phone number" name="identifier" value={form.identifier} onChange={update} required placeholder="you@example.com or 08012345678" />
           <div className="flex flex-col gap-2 w-full">
             <label htmlFor="password" className="text-sm text-gray-600">Password<span className="ml-1 text-red-500" aria-hidden="true">*</span></label>
             <div className="flex items-center rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] pr-3 focus-within:ring-2 focus-within:ring-purple-400">
