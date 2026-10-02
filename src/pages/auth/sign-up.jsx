@@ -15,6 +15,7 @@ const Signup = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const update = (event) => setForm({ ...form, [event.target.name]: event.target.value });
+  const passwordsMismatch = form.confirmPassword.length > 0 && form.password !== form.confirmPassword;
   const valid = form.name.trim().length >= 2 && form.username.trim().length >= 3 && form.email.trim() && form.phone.trim().length >= 7 && Number(form.age) >= 1 && Number(form.age) <= 130 && form.password.length >= 8 && form.password === form.confirmPassword;
 
   const submit = async (event) => {
@@ -58,6 +59,7 @@ const Signup = () => {
               <PasswordInput label="Create password" name="password" value={form.password} onChange={update} minLength={8} placeholder="At least 8 characters" />
               <PasswordInput label="Confirm password" name="confirmPassword" value={form.confirmPassword} onChange={update} minLength={8} placeholder="Repeat password" />
             </div>
+            {passwordsMismatch && <p className="-mt-3 mb-5 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-600" role="alert">Passwords do not match. Enter the same password in both fields.</p>}
             <button type="submit" disabled={loading || !valid} className="w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white transition hover:bg-[#a947dc] active:scale-[.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-100">{loading ? "Creating account..." : "Create account"}</button>
             <Link to="/login"><p className="text-center font-semibold text-sm mt-4">Already have an account? <span className="text-purple-600">Login</span></p></Link>
           </form>
