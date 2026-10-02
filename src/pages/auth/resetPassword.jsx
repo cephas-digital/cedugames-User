@@ -80,7 +80,7 @@ function ResetPassword() {
                 label="Create password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="At least 10 characters"
+                placeholder="At least 8 characters"
               />
               <PasswordStrength password={password} />
             </div>
@@ -95,7 +95,7 @@ function ResetPassword() {
               autoComplete="new-password"
             />
 
-            <Button text={loading ? "Resetting..." : "Reset Password"} type="submit" disabled={loading || !resetToken || password.length < 10 || password.length > 128 || password !== confirmPassword} />
+            <Button text={loading ? "Resetting..." : "Reset Password"} type="submit" disabled={loading || !resetToken || password.length < 8 || password.length > 128 || password !== confirmPassword} />
           </form>
 
           {resetToken ? (

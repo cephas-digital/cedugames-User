@@ -626,7 +626,7 @@ export default function Profile() {
           >
             <h2 className="text-xl font-black">Change password</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Use at least 10 characters for your new password.
+              Use at least 8 characters for your new password.
             </p>
             {passwordError && (
               <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
@@ -634,8 +634,8 @@ export default function Profile() {
               </p>
             )}
             <PasswordField label="Current password" name="currentPassword" value={passwordForm.currentPassword} onChange={(value) => setPasswordForm((current) => ({ ...current, currentPassword: value }))} />
-            <PasswordField label="New password" name="newPassword" value={passwordForm.newPassword} onChange={(value) => setPasswordForm((current) => ({ ...current, newPassword: value }))} minLength={10} />
-            <PasswordField label="Confirm new password" name="confirmPassword" value={passwordForm.confirmPassword} onChange={(value) => setPasswordForm((current) => ({ ...current, confirmPassword: value }))} minLength={10} />
+            <PasswordField label="New password" name="newPassword" value={passwordForm.newPassword} onChange={(value) => setPasswordForm((current) => ({ ...current, newPassword: value }))} minLength={8} />
+            <PasswordField label="Confirm new password" name="confirmPassword" value={passwordForm.confirmPassword} onChange={(value) => setPasswordForm((current) => ({ ...current, confirmPassword: value }))} minLength={8} />
             <div className="mt-7 flex gap-3">
               <button type="button" onClick={() => setChangingPassword(false)} className="flex-1 rounded-xl border px-4 py-3 font-bold">Cancel</button>
               <button disabled={passwordBusy} className="flex-1 rounded-xl bg-purple-600 px-4 py-3 font-bold text-white disabled:opacity-60">{passwordBusy ? "Updating..." : "Update password"}</button>

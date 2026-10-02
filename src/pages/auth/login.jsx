@@ -28,7 +28,7 @@ function Login() {
   return (
     <div className="min-h-screen font-Nunito flex items-center justify-center bg-gray-100 p-4" style={{ backgroundImage: `url(${Bt})`, backgroundSize: "cover", backgroundPosition: "center" }}>
       <AuthCard><form onSubmit={submit}>
-        <div className="text-center mb-6"><div className="flex justify-center"><BrandLogo className="mb-5 w-48 sm:w-56" /></div><HeaderText>Welcome to CeduGames</HeaderText><p className="text-gray-500 text-sm">Cephas Educational Games</p></div>
+        <div className="text-center mb-6"><div className="flex justify-center"><BrandLogo className="mb-5 w-48 sm:w-56" /></div><HeaderText>Welcome to Cedu</HeaderText><p className="text-gray-500 text-sm">Cephas Educational Games</p></div>
         <div className="bg-purple-100 text-purple-600 text-sm rounded-lg px-4 py-3 mb-6">Let's get smart and have fun!</div>
         {state?.message && <p className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{state.message}</p>}
         {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
