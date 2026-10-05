@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "../../components/homeNavbar";
 import Coin from "../../assets/coin.png";
 import CoinHeader from "../../assets/coin-header.png";
-import { apiRequest, getCachedUser, isSignedIn } from "../../services/api";
+import { apiRequest, assetUrl, getCachedUser, isSignedIn } from "../../services/api";
 import { AirtimePanel } from "./airtime";
 
 const money = (minor, currency) =>
@@ -19,12 +19,14 @@ const dateTime = (value) =>
 const transactionDetail = (item) =>
   item.reference?.startsWith("game-action:")
     ? item.action_name?.replaceAll("_", " ")
+    : item.reference?.startsWith("household-transfer:")
+      ? "Household transfer"
     : item.reference;
 
 export default function CoinShop() {
   const cachedPlayer = getCachedUser();
   const canPurchaseCoins = !cachedPlayer?.parent_user_id && cachedPlayer?.isPrimary !== false;
-  const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get("tab") === "airtime" ? "airtime" : "packages");
+  const [activeTab, setActiveTab] = useState(() => ["airtime", "transfer"].includes(new URLSearchParams(window.location.search).get("tab")) ? new URLSearchParams(window.location.search).get("tab") : "packages");
   const [packages, setPackages] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [balance, setBalance] = useState(null);
@@ -32,7 +34,13 @@ export default function CoinShop() {
   const [error, setError] = useState("");
   const [buying, setBuying] = useState("");
   const [notice, setNotice] = useState("");
+  const [children, setChildren] = useState([]);
+  const [transfer, setTransfer] = useState({ recipientId: "", amount: "" });
+  const [transferring, setTransferring] = useState(false);
+  const pendingTransfer = useRef(null);
   const signedIn = isSignedIn();
+
+  useEffect(() => { if (!canPurchaseCoins && activeTab === "transfer") setActiveTab("packages"); }, [activeTab, canPurchaseCoins]);
 
   useEffect(() => {
     let live = true;
@@ -44,13 +52,16 @@ export default function CoinShop() {
         if (!live) return;
         setPackages(packageData.packages || []);
         if (signedIn) {
-          const [wallet, history] = await Promise.all([
+          const [wallet, history, recipients] = await Promise.all([
             apiRequest("/coins/me"),
             apiRequest("/coins/me/transactions?limit=50"),
+            canPurchaseCoins ? apiRequest("/coins/transfer-recipients").catch(() => ({ recipients: [] })) : Promise.resolve({ recipients: [] }),
           ]);
           if (!live) return;
           setBalance(wallet.balance);
           setTransactions(history.transactions || []);
+          setChildren(recipients.recipients || []);
+          setTransfer((current) => ({ ...current, recipientId: current.recipientId || recipients.recipients?.[0]?.id || "" }));
         }
       } catch (e) {
         if (live) setError(e.message);
@@ -61,7 +72,7 @@ export default function CoinShop() {
     return () => {
       live = false;
     };
-  }, [signedIn]);
+  }, [signedIn, canPurchaseCoins]);
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const transactionId = query.get("transaction_id");
@@ -103,6 +114,25 @@ export default function CoinShop() {
       setBuying("");
     }
   };
+  const submitTransfer = async (event) => {
+    event.preventDefault();
+    const amount = Number(transfer.amount);
+    if (!transfer.recipientId || !Number.isInteger(amount) || amount < 1) { setError("Choose a child and enter a whole number of coins."); return; }
+    setTransferring(true); setError(""); setNotice("");
+    try {
+      const signature = `${transfer.recipientId}:${amount}`;
+      if (pendingTransfer.current?.signature !== signature) pendingTransfer.current = { signature, id: crypto.randomUUID() };
+      const result = await apiRequest("/coins/transfers", { method: "POST", body: JSON.stringify({ recipientId: transfer.recipientId, amount, clientTransferId: pendingTransfer.current.id }) });
+      setBalance(result.senderBalance);
+      setChildren((current) => current.map((child) => child.id === transfer.recipientId ? { ...child, balance: result.recipientBalance } : child));
+      setTransfer((current) => ({ ...current, amount: "" }));
+      const history = await apiRequest("/coins/me/transactions?limit=50");
+      setTransactions(history.transactions || []);
+      setNotice(`${amount.toLocaleString()} coins sent to ${result.recipient?.name || "the selected child"}.`);
+      pendingTransfer.current = null;
+    } catch (e) { setError(e.message); }
+    finally { setTransferring(false); }
+  };
   const groups = useMemo(
     () =>
       transactions.reduce((all, item) => {
@@ -132,12 +162,13 @@ export default function CoinShop() {
           <div className="mb-6 flex w-full gap-2 overflow-x-auto border-b border-slate-100 px-1 font-bold [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mb-8 sm:justify-center sm:gap-8">
             {[
               ["packages", "Coin packages"],
+              ...(canPurchaseCoins ? [["transfer", "Transfer to child"]] : []),
               ["history", "Transaction history"],
               ["airtime", "Buy airtime"],
             ].map(([id, label]) => (
               <button
                 key={id}
-                onClick={() => {setActiveTab(id);window.history.replaceState({},"",id==="airtime"?"/shop?tab=airtime":"/shop")}}
+                onClick={() => {setActiveTab(id);window.history.replaceState({},"",["airtime","transfer"].includes(id)?`/shop?tab=${id}`:"/shop")}}
                 className={`shrink-0 cursor-pointer whitespace-nowrap border-b-2 px-3 pb-3 text-sm sm:text-base ${activeTab === id ? "border-[#9B5DE5] text-[#9B5DE5]" : "border-transparent text-gray-400"}`}
               >
                 {label}
@@ -201,6 +232,19 @@ export default function CoinShop() {
               )}
               <p className="mt-7 text-center text-xs text-slate-400">Payments are securely processed by Flutterwave. Coins are added only after server verification.</p>
             </>
+          ) : activeTab === "transfer" ? (
+            <div className="mx-auto max-w-2xl">
+              <div className="rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-5 sm:p-8">
+                <h2 className="text-2xl font-black text-slate-900">Send coins to a child</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">Move coins from the main profile balance to any child linked to this household. Transfers cannot exceed your available balance.</p>
+                {children.length ? <form onSubmit={submitTransfer} className="mt-7 space-y-5">
+                  <fieldset><legend className="mb-3 text-sm font-black text-slate-700">Choose a child</legend><div className="grid gap-3 sm:grid-cols-2">{children.map((child) => <label key={child.id} className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 bg-white p-4 transition ${transfer.recipientId === child.id ? "border-purple-500 ring-4 ring-purple-100" : "border-slate-100 hover:border-purple-200"}`}><input type="radio" name="recipient" value={child.id} checked={transfer.recipientId === child.id} onChange={(event) => setTransfer((current) => ({ ...current, recipientId: event.target.value }))} className="sr-only"/><span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-purple-100 text-lg font-black text-purple-700">{child.profileImageUrl ? <img src={assetUrl(child.profileImageUrl)} alt="" className="h-full w-full object-cover"/> : child.name?.slice(0,1)?.toUpperCase()}</span><span className="min-w-0"><strong className="block truncate text-slate-900">{child.name}</strong><span className="text-xs font-semibold text-slate-400">{Number(child.balance).toLocaleString()} coins</span></span></label>)}</div></fieldset>
+                  <label className="block text-sm font-black text-slate-700">Amount<input type="number" inputMode="numeric" required min="1" max={Math.max(1, Number(balance || 0))} step="1" value={transfer.amount} onChange={(event) => setTransfer((current) => ({ ...current, amount: event.target.value }))} placeholder="Enter number of coins" className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100"/></label>
+                  <div className="flex items-center justify-between rounded-xl bg-amber-50 px-4 py-3 text-sm"><span className="font-semibold text-amber-800">Available to transfer</span><strong className="text-amber-900">{Number(balance || 0).toLocaleString()} coins</strong></div>
+                  <button type="submit" disabled={transferring || Number(balance || 0) < 1} className="w-full rounded-xl bg-purple-600 px-5 py-3 font-black text-white shadow-lg transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50">{transferring ? "Sending coins…" : "Transfer coins"}</button>
+                </form> : <div className="mt-7 rounded-2xl border-2 border-dashed border-purple-200 bg-white p-8 text-center"><p className="font-black text-slate-800">No linked child profiles yet</p><p className="mt-1 text-sm text-slate-500">Add a child from the family player-selection page before transferring coins.</p></div>}
+              </div>
+            </div>
           ) : !signedIn ? (
             <div className="py-20 text-center text-gray-500">
               Sign in to view your coin history.

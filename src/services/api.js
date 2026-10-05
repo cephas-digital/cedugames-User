@@ -7,6 +7,7 @@ export const ACTIVE_PROFILE_KEY = "cedugames_active_profile_id";
 const SELECTIONS_KEY = "cedugames_learning_selections";
 const WALLETS_KEY = "cedugames_wallet_states";
 let expiryTimer;
+const MAX_TIMEOUT_MS = 2_147_000_000;
 
 function getSessionToken() {
   return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
@@ -30,10 +31,14 @@ function scheduleSessionExpiry(token) {
   window.clearTimeout(expiryTimer);
   if (!token) return;
   try {
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const encodedPayload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(encodedPayload.padEnd(Math.ceil(encodedPayload.length / 4) * 4, "=")));
     const remaining = (Number(payload.exp) * 1000) - Date.now();
     if (!Number.isFinite(remaining) || remaining <= 0) returnToLogin();
-    else expiryTimer = window.setTimeout(returnToLogin, remaining);
+    else expiryTimer = window.setTimeout(
+      remaining > MAX_TIMEOUT_MS ? () => scheduleSessionExpiry(token) : returnToLogin,
+      Math.min(remaining, MAX_TIMEOUT_MS),
+    );
   } catch {
     returnToLogin();
   }
