@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "../../components/homeNavbar";
 import Coin from "../../assets/coin.png";
 import CoinHeader from "../../assets/coin-header.png";
@@ -19,6 +19,8 @@ const dateTime = (value) =>
 const transactionDetail = (item) =>
   item.reference?.startsWith("game-action:")
     ? item.action_name?.replaceAll("_", " ")
+    : item.reference?.startsWith("household-transfer:")
+      ? "Household transfer"
     : item.reference;
 
 export default function CoinShop() {
@@ -35,6 +37,7 @@ export default function CoinShop() {
   const [children, setChildren] = useState([]);
   const [transfer, setTransfer] = useState({ recipientId: "", amount: "" });
   const [transferring, setTransferring] = useState(false);
+  const pendingTransfer = useRef(null);
   const signedIn = isSignedIn();
 
   useEffect(() => { if (!canPurchaseCoins && activeTab === "transfer") setActiveTab("packages"); }, [activeTab, canPurchaseCoins]);
@@ -52,7 +55,7 @@ export default function CoinShop() {
           const [wallet, history, recipients] = await Promise.all([
             apiRequest("/coins/me"),
             apiRequest("/coins/me/transactions?limit=50"),
-            canPurchaseCoins ? apiRequest("/coins/transfer-recipients") : Promise.resolve({ recipients: [] }),
+            canPurchaseCoins ? apiRequest("/coins/transfer-recipients").catch(() => ({ recipients: [] })) : Promise.resolve({ recipients: [] }),
           ]);
           if (!live) return;
           setBalance(wallet.balance);
@@ -117,13 +120,16 @@ export default function CoinShop() {
     if (!transfer.recipientId || !Number.isInteger(amount) || amount < 1) { setError("Choose a child and enter a whole number of coins."); return; }
     setTransferring(true); setError(""); setNotice("");
     try {
-      const result = await apiRequest("/coins/transfers", { method: "POST", body: JSON.stringify({ recipientId: transfer.recipientId, amount, clientTransferId: crypto.randomUUID() }) });
+      const signature = `${transfer.recipientId}:${amount}`;
+      if (pendingTransfer.current?.signature !== signature) pendingTransfer.current = { signature, id: crypto.randomUUID() };
+      const result = await apiRequest("/coins/transfers", { method: "POST", body: JSON.stringify({ recipientId: transfer.recipientId, amount, clientTransferId: pendingTransfer.current.id }) });
       setBalance(result.senderBalance);
       setChildren((current) => current.map((child) => child.id === transfer.recipientId ? { ...child, balance: result.recipientBalance } : child));
       setTransfer((current) => ({ ...current, amount: "" }));
       const history = await apiRequest("/coins/me/transactions?limit=50");
       setTransactions(history.transactions || []);
       setNotice(`${amount.toLocaleString()} coins sent to ${result.recipient?.name || "the selected child"}.`);
+      pendingTransfer.current = null;
     } catch (e) { setError(e.message); }
     finally { setTransferring(false); }
   };
