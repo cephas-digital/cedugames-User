@@ -21,6 +21,18 @@ body {
 img, svg { max-width: 100%; }
 button, input, select, textarea { font: inherit; }
 
+.privacy-section { border-bottom: 1px solid #f1e8ff; padding: 0 0 2rem; }
+.privacy-section + .privacy-section { padding-top: 2rem; }
+.privacy-section:last-child { border-bottom: 0; padding-bottom: 0; }
+.privacy-section h2 { margin-bottom: .9rem; color: #1e293b; font-size: clamp(1.35rem,3vw,1.75rem); font-weight: 800; line-height: 1.25; }
+.privacy-section h3 { margin: 1.35rem 0 .45rem; color: #334155; font-size: 1.05rem; font-weight: 800; }
+.privacy-section p,.privacy-section li { color: #475569; line-height: 1.75; }
+.privacy-section p + p { margin-top: .9rem; }
+.privacy-section ul { margin: .65rem 0 1rem; padding-left: 1.35rem; list-style: disc; }
+.privacy-section li + li { margin-top: .4rem; }
+.privacy-section a { color: #7e22ce; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.privacy-section a:focus-visible { border-radius: .25rem; outline: 3px solid #d8b4fe; outline-offset: 3px; }
+
 .brand-loader { display: grid; place-content: center; justify-items: center; gap: 1rem; padding: 2rem; text-align: center; color: #56347f; background: radial-gradient(circle at top, #fff 0, #f9f5ff 54%, #f2eaff 100%); }
 .brand-loader__logo { width: min(19rem, 72vw); animation: brand-breathe 1.8s ease-in-out infinite; }
 .brand-loader__dots { display: flex; gap: .45rem; }

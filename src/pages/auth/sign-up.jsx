@@ -62,6 +62,9 @@ const Signup = () => {
             {passwordsMismatch && <p className="-mt-3 mb-5 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-600" role="alert">Passwords do not match. Enter the same password in both fields.</p>}
             <button type="submit" disabled={loading || !valid} className="w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white transition hover:bg-[#a947dc] active:scale-[.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-100">{loading ? "Creating account..." : "Create account"}</button>
             <Link to="/login"><p className="text-center font-semibold text-sm mt-4">Already have an account? <span className="text-purple-600">Login</span></p></Link>
+            <p className="mt-2 text-center text-sm text-slate-500">
+              <Link className="font-semibold text-purple-700 underline decoration-purple-300 underline-offset-4 hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-400" to="/privacy-policy">Privacy Policy</Link>
+            </p>
           </form>
         </div>
       </div>

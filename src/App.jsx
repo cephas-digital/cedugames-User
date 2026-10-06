@@ -26,6 +26,8 @@ const ChangePassword = lazy(() => import("./pages/auth/changePassword"));
 const Notifications = lazy(() => import("./pages/games/notification"));
 const DailyReward = lazy(() => import("./pages/games/dailyReward"));
 const NotFound = lazy(() => import("./pages/notFound"));
+const PrivacyPolicy = lazy(() => import("./pages/privacy-policy"));
+const AccountDeletion = lazy(() => import("./pages/account-deletion"));
 function App() {
   return (
     <BrowserRouter>
@@ -44,6 +46,16 @@ function App() {
           <Route
             path="/sign-up"
             element={<Signup />}
+          />
+
+          <Route
+            path="/privacy-policy"
+            element={<PrivacyPolicy />}
+          />
+
+          <Route
+            path="/account-deletion"
+            element={<AccountDeletion />}
           />
 
           <Route
