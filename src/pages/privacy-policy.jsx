@@ -51,7 +51,7 @@ const sections = [
   {
     id: "retention-rights",
     title: "Retention, deletion and parental rights",
-    content: <><p>We keep a child&apos;s information only as long as needed to provide the service and as consented to by the parent. Inactive accounts are reviewed periodically and personal data is deleted or anonymised after 12 months of inactivity, unless law, safety or audit requirements require longer retention.</p><p>Parents and guardians may review their child&apos;s information, correct it, request deletion, or refuse further collection and use. Send a request to <a href="mailto:cedugames@gmail.com">cedugames@gmail.com</a>.</p></>,
+    content: <><p>We keep a child&apos;s information only as long as needed to provide the service and as consented to by the parent. Inactive accounts are reviewed periodically and personal data is deleted or anonymised after 12 months of inactivity, unless law, safety or audit requirements require longer retention.</p><p>Parents and guardians may review their child&apos;s information, correct it, request deletion, or refuse further collection and use. Submit an <Link to="/account-deletion">account deletion request</Link> or email <a href="mailto:cedugames@gmail.com">cedugames@gmail.com</a>.</p></>,
   },
   {
     id: "security-transfers",
@@ -104,7 +104,7 @@ const PrivacyPolicy = () => (
         </article>
       </div>
     </main>
-    <footer className="border-t border-purple-100 bg-white px-4 py-8 text-center text-sm text-slate-600"><p>© 2026 CEDUGAMES · <Link className="font-bold text-purple-700 underline underline-offset-4" to="/login">Login</Link></p></footer>
+    <footer className="border-t border-purple-100 bg-white px-4 py-8 text-center text-sm text-slate-600"><p>© 2026 CEDUGAMES · <Link className="font-bold text-purple-700 underline underline-offset-4" to="/account-deletion">Delete account</Link> · <Link className="font-bold text-purple-700 underline underline-offset-4" to="/login">Login</Link></p></footer>
   </div>
 );
 
