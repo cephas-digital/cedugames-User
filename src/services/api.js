@@ -8,6 +8,14 @@ const SELECTIONS_KEY = "cedugames_learning_selections";
 const WALLETS_KEY = "cedugames_wallet_states";
 let expiryTimer;
 const MAX_TIMEOUT_MS = 2_147_000_000;
+const OFFLINE_MESSAGE = "No internet connection. Please check your connection and try again.";
+
+function isNetworkFailure(error) {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
+  if (error?.name !== "TypeError") return false;
+  const message = String(error.message || "").toLowerCase();
+  return message.includes("fetch") || message.includes("network") || message.includes("connection");
+}
 
 function getSessionToken() {
   return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
@@ -65,6 +73,7 @@ export async function apiRequest(path, options = {}) {
     return data;
   } catch (error) {
     if (timedOut) throw new Error("The server took too long to respond. Please try again.");
+    if (isNetworkFailure(error)) throw new Error(OFFLINE_MESSAGE);
     throw error;
   } finally {
     window.clearTimeout(timeout);
