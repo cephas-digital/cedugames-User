@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "../../components/navbar";
+import BackButton from "../../components/BackButton";
 import PageLoader from "../../components/PageLoader";
 import EmptyState from "../../components/EmptyState";
 import LearnLevelMap from "../../components/LearnLevelMap";
@@ -53,7 +54,7 @@ function ExplorerContent({ program, parent, type }) {
   return <div className="selection-page min-h-screen bg-[#f6fbff]">
     <Navbar />
     <main className="selection-page__content mx-auto max-w-6xl px-5 py-10">
-      <Link to={parent ? `/learn?program=${program}` : "/age-selection"} className="selection-back font-bold text-purple-700">← Back</Link>
+      <BackButton fallback={parent ? `/learn?program=${program}` : "/age-selection"} className="selection-back font-bold text-purple-700" />
       <header className="selection-hero mt-4 rounded-[2rem] bg-gradient-to-r from-indigo-600 to-fuchsia-500 p-8 text-white">
         <p className="text-xs font-black uppercase tracking-widest">CEDU-LEARN</p>
         <h1 className="mt-2 text-4xl font-black">{type === "questions" ? "Level Questions" : type === "level" ? "Choose a level" : `Choose a ${type}`}</h1>
