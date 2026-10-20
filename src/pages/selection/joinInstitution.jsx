@@ -26,6 +26,14 @@ export default function JoinInstitution() {
   }, []);
 
   useEffect(() => {
+    const invitationCode = new URLSearchParams(window.location.search).get("code")?.trim().toUpperCase();
+    if (!invitationCode) return;
+    setCode(invitationCode);
+    setMode("code");
+    apiRequest(`/institutions/code/${encodeURIComponent(invitationCode)}`).then((data) => setResult(data.institution)).catch((requestError) => setLookupError(requestError.message));
+  }, []);
+
+  useEffect(() => {
     apiRequest("/institutions/my-memberships").then((data) => {
       setMemberships(data.memberships || []);
       const next = {};
