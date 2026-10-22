@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "../homeNavbar";
-import { apiRequest, isSignedIn } from "../../services/api";
+import { apiRequest, cacheWallet, isSignedIn } from "../../services/api";
 import BG from "../../assets/BG.png";
 import OptionsGrid from "./optionGrid";
 import QuestionCard from "./questionCard";
@@ -66,6 +66,8 @@ export default function Quiz() {
           apiRequest("/gameplay/actions"),
         ]);
         let s = initial;
+        if (q.gameplay) s = { ...s, lives_remaining: q.gameplay.livesRemaining, coins_count: q.gameplay.coinBalance, max_lives: q.gameplay.maxLives };
+        if (q.gameplay?.refilled) { cacheWallet(s); window.dispatchEvent(new Event("cedugames:wallet-updated")); }
         if (
           Number(s.lives_remaining) <= 0 &&
           Number(s.coins_count) >= Number(s.refill_coin_cost)

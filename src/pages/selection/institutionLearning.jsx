@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Navbar from "../../components/navbar";
 import PageLoader from "../../components/PageLoader";
-import { apiRequest, assetUrl } from "../../services/api";
+import { apiRequest, assetUrl, cacheWallet } from "../../services/api";
 import {
   playClickSound,
   playCorrectSound,
@@ -17,14 +17,26 @@ export default function InstitutionLearning() {
   const [resource, setResource] = useState({ institutionId: null, data: null, error: "" });
   const [session, setSession] = useState(null);
   const [soundOn, setSoundOn] = useState(true);
-  const [history, setHistory] = useState({ requestKey: "", attempts: [], pagination: { page: 1, limit: 10, total: 0 }, error: "" });
+  const [history, setHistory] = useState({ requestKey: "", plays: [], pagination: { page: 1, limit: 10, total: 0 }, error: "" });
   const [historyPage, setHistoryPage] = useState(1);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedLevelId, setSelectedLevelId] = useState("");
   const [startingArea, setStartingArea] = useState("");
   const [practiceError, setPracticeError] = useState("");
+  const [gameplayStatus, setGameplayStatus] = useState(null);
+  const applyGameplayStatus = status => { setGameplayStatus(status); cacheWallet(status); };
+  const refreshGameplayStatus = () => apiRequest("/gameplay/status").then(applyGameplayStatus).catch(() => undefined);
   useEffect(() => { setSelectedCategory(""); setSelectedLevelId(""); setPracticeError(""); }, [institutionId]);
+  useEffect(() => {
+    let active = true;
+    const load = () => apiRequest("/gameplay/status").then(status => { if (active) applyGameplayStatus(status); }).catch(() => undefined);
+    const onWalletUpdate = () => { void load(); };
+    void load();
+    window.addEventListener("cedugames:wallet-updated", onWalletUpdate);
+    window.addEventListener("focus", onWalletUpdate);
+    return () => { active = false; window.removeEventListener("cedugames:wallet-updated", onWalletUpdate); window.removeEventListener("focus", onWalletUpdate); };
+  }, [institutionId]);
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -37,8 +49,8 @@ export default function InstitutionLearning() {
   useEffect(() => {
     const controller = new AbortController();
     apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/history?page=${historyPage}&limit=10`, { signal: controller.signal })
-      .then(response => setHistory({ requestKey: historyRequestKey, attempts: response.attempts || [], pagination: response.pagination || { page: historyPage, limit: 10, total: 0 }, error: "" }))
-      .catch(requestError => { if (requestError.name !== "AbortError") setHistory({ requestKey: historyRequestKey, attempts: [], pagination: { page: historyPage, limit: 10, total: 0 }, error: requestError.message || "Your learning history could not be loaded." }); });
+      .then(response => setHistory({ requestKey: historyRequestKey, plays: response.plays || [], pagination: response.pagination || { page: historyPage, limit: 10, total: 0 }, error: "" }))
+      .catch(requestError => { if (requestError.name !== "AbortError") setHistory({ requestKey: historyRequestKey, plays: [], pagination: { page: historyPage, limit: 10, total: 0 }, error: requestError.message || "Your learning history could not be loaded." }); });
     return () => controller.abort();
   }, [institutionId, historyPage, historyRefresh, historyRequestKey]);
   const historyLoading = history.requestKey !== historyRequestKey;
@@ -50,6 +62,9 @@ export default function InstitutionLearning() {
   const levelsInCategory = (data?.levels || []).filter(level => (level.category || "Learning group") === selectedCategory);
   const selectedLevel = levelsInCategory.find(level => level.id === selectedLevelId);
   const learningAreas = selectedLevel ? (() => { const map = new Map((data.learningAreas || []).filter(area => area.levelId === selectedLevel.id).map(area => [area.name, Number(area.questionCount) || 0])); (selectedLevel.subjects || []).forEach(subject => { if (!map.has(subject)) map.set(subject, 0); }); if (!map.size) map.set("General", 0); return [...map.entries()]; })() : [];
+  const noLives = Number(gameplayStatus?.lives_remaining) <= 0;
+  const canAffordRefill = Number(gameplayStatus?.coins_count) >= Number(gameplayStatus?.refill_coin_cost);
+  const blockedByLives = Boolean(gameplayStatus && noLives && !canAffordRefill);
   useEffect(() => {
     if (!loading && data && window.location.hash === "#learning-history") {
       window.requestAnimationFrame(() => document.getElementById("learning-history")?.scrollIntoView({ behavior: "smooth" }));
@@ -64,9 +79,12 @@ export default function InstitutionLearning() {
       const response = await apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/practice`, { method: "POST", body: JSON.stringify({ levelId: group.levelId, subject: group.title }) });
       const questions = response.questions || [];
       if (!questions.length) throw new Error("No published questions are available in this learning area yet.");
+      if (!response.play?.id) throw new Error("Practice could not be prepared. Please refresh and try again.");
+      if (response.gameplay) applyGameplayStatus({ lives_remaining: response.gameplay.livesRemaining, max_lives: response.gameplay.maxLives, coins_count: response.gameplay.coinBalance, passing_score_percent: response.gameplay.passingScorePercent, refill_coin_cost: response.gameplay.refillCoinCost });
+      if (response.gameplay?.refilled) window.dispatchEvent(new Event("cedugames:wallet-updated"));
       if (soundOn) { playClickSound(); startBackgroundMusic(); }
-      setSession({ ...group, questions, current: 0, correct: 0, phase: "starting", selected: null, attempt: null, remaining: 0, error: "", reviewAttemptIds: [] });
-    } catch (requestError) { setPracticeError(requestError.message || "Practice could not be started. Please try again."); } finally { setStartingArea(""); }
+      setSession({ ...group, playId: response.play?.id, questions, current: 0, correct: 0, phase: "starting", selected: null, attempt: null, remaining: 0, error: "", reviewAttemptIds: [] });
+    } catch (requestError) { setPracticeError(requestError.message || "Practice could not be started. Please try again."); void refreshGameplayStatus(); } finally { setStartingArea(""); }
   };
   const closeSession = () => { stopBackgroundMusic(); setSession(null); };
   const toggleSound = () => {
@@ -117,16 +135,19 @@ export default function InstitutionLearning() {
               </> : <>
                 <button type="button" onClick={() => setSelectedLevelId("")} className="mb-4 text-sm font-bold text-purple-700 hover:text-purple-900">&larr; {selectedCategory} <span className="mx-1 text-slate-300">/</span> {labels.level.toLowerCase()}</button>
                 <div className="mb-4"><p className="text-xs font-black uppercase tracking-wide text-purple-600">{selectedCategory} <span className="mx-1 text-slate-300">/</span> {selectedLevel.name}</p><h3 className="mt-1 text-lg font-black text-slate-900">Choose {labels.subject.toLowerCase().replace(/s$/, "")}</h3><p className="mt-1 text-sm text-slate-500">Each play shuffles questions and includes up to {data.institution.questionsPerPlay || 10}.</p></div>
-                {practiceError && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{practiceError}</p>}<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{learningAreas.map(([subject, questionCount], index) => <article key={subject} className="flex min-w-0 flex-col justify-between gap-5 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_16px_-14px_rgba(25,32,52,.35)] transition duration-200 hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-[0_18px_35px_-24px_rgba(91,55,139,.35)]"><div className="flex min-w-0 items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-100 sm:h-11 sm:w-11 text-lg font-black text-purple-700">{String.fromCharCode(65 + index % 26)}</span><div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-wide text-purple-600">{labels.subject.replace(/s$/, "")}</p><h4 className="mt-0.5 truncate text-base font-black text-slate-900">{subject}</h4><p className="mt-1 text-xs text-slate-500">{questionCount ? `${Math.min(questionCount, data.institution.questionsPerPlay || 10)} per play · ${questionCount} available` : "No published questions yet"}</p></div></div><button type="button" disabled={!questionCount || Boolean(startingArea)} onClick={() => startPractice({ title: subject, levelName: selectedLevel.name, levelId: selectedLevel.id, questionCount })} className="min-h-11 w-full shrink-0 rounded-xl bg-purple-600 px-5 py-3 text-sm font-black sm:w-auto text-white shadow-md transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-slate-300">{startingArea === `${selectedLevel.id}:${subject}` ? "Starting..." : questionCount ? <>Start practice &rarr;</> : "Coming soon"}</button></article>)}</div>
+                {gameplayStatus && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-purple-100 bg-purple-50 px-4 py-3 text-sm"><span className="font-bold text-slate-700">Lives: <strong className="text-purple-700">{Math.max(0, Number(gameplayStatus.lives_remaining) || 0)} / {Number(gameplayStatus.max_lives) || 0}</strong></span><span className="font-semibold text-slate-500">A score below {Number(gameplayStatus.passing_score_percent) || 0}% uses one life.</span></div>}
+                {blockedByLives && <p role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">You have no lives and need {Number(gameplayStatus.refill_coin_cost).toLocaleString()} coins to refill. Playing is paused until lives are restored.</p>}
+                {noLives && canAffordRefill && <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">You have no lives. Starting practice will automatically use {Number(gameplayStatus.refill_coin_cost).toLocaleString()} coins to refill, following the game rules.</p>}
+                {practiceError && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{practiceError}</p>}<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{learningAreas.map(([subject, questionCount], index) => <article key={subject} className="flex min-w-0 flex-col justify-between gap-5 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_16px_-14px_rgba(25,32,52,.35)] transition duration-200 hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-[0_18px_35px_-24px_rgba(91,55,139,.35)]"><div className="flex min-w-0 items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-100 sm:h-11 sm:w-11 text-lg font-black text-purple-700">{String.fromCharCode(65 + index % 26)}</span><div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-wide text-purple-600">{labels.subject.replace(/s$/, "")}</p><h4 className="mt-0.5 truncate text-base font-black text-slate-900">{subject}</h4><p className="mt-1 text-xs text-slate-500">{questionCount ? `${Math.min(questionCount, data.institution.questionsPerPlay || 10)} per play · ${questionCount} available` : "No published questions yet"}</p></div></div><button type="button" disabled={!questionCount || Boolean(startingArea) || blockedByLives} onClick={() => startPractice({ title: subject, levelName: selectedLevel.name, levelId: selectedLevel.id, questionCount })} className="min-h-11 w-full shrink-0 rounded-xl bg-purple-600 px-5 py-3 text-sm font-black sm:w-auto text-white shadow-md transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-slate-300">{startingArea === `${selectedLevel.id}:${subject}` ? "Starting..." : blockedByLives ? "No lives available" : noLives && canAffordRefill ? `Refill (${Number(gameplayStatus.refill_coin_cost).toLocaleString()} coins) & start` : questionCount ? <>Start practice &rarr;</> : "Coming soon"}</button></article>)}</div>
               </>}
             </div>
           </section>}
         <section id="learning-history" className="mt-8 scroll-mt-6 rounded-[2rem] border border-purple-100/80 bg-white p-5 shadow-[0_18px_55px_-38px_rgba(51,38,84,.32)] sm:p-8 lg:mt-10 lg:px-10 lg:py-9">
-          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-purple-600">This institution</p><h2 className="mt-1 text-2xl font-black text-slate-900">Your learning history</h2><p className="mt-1 text-sm text-slate-500">Your completed practice from {data.institution.name}, for this player profile.</p></div><span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-black text-purple-700">{history.pagination.total} attempts</span></div>
+          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-purple-600">This institution</p><h2 className="mt-1 text-2xl font-black text-slate-900">Your learning history</h2><p className="mt-1 text-sm text-slate-500">Completed practice plays from {data.institution.name}, for this player profile. History is kept for 30 days.</p></div><span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-black text-purple-700">{history.pagination.total} {history.pagination.total === 1 ? "play" : "plays"}</span></div>
           {historyLoading ? <p role="status" className="mt-5 rounded-xl bg-slate-50 p-5 text-sm font-semibold text-slate-500">Loading your learning history...</p>
             : historyError ? <div className="mt-5 rounded-xl bg-red-50 p-5 text-sm font-semibold text-red-700"><p role="alert">{historyError}</p><button type="button" onClick={() => setHistoryRefresh(value => value + 1)} className="mt-3 rounded-lg bg-white px-4 py-2 font-black text-red-700">Try again</button></div>
-            : history.attempts.length ? <>
-              <div className="mt-4 divide-y divide-slate-100">{history.attempts.map(attempt => <article key={attempt.id} className="flex flex-wrap items-start justify-between gap-3 py-4"><div className="min-w-0 flex-1"><div className="rich-content font-bold leading-6 text-slate-900" dangerouslySetInnerHTML={{ __html: attempt.question || "Question no longer available" }} /><p className="mt-1 text-xs font-semibold text-slate-500">{[attempt.level, attempt.subject].filter(Boolean).join(" / ") || "Institution practice"} · {new Date(attempt.completedAt).toLocaleString()}</p>{attempt.selectedOption && <div className="rich-content mt-2 text-sm text-slate-600"><span className="font-semibold">Your answer: </span><span dangerouslySetInnerHTML={{ __html: attempt.selectedOption }} /></div>}</div><span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${attempt.correct === true ? "bg-emerald-100 text-emerald-700" : attempt.timedOut ? "bg-amber-100 text-amber-700" : attempt.correct === false ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"}`}>{attempt.correct === true ? "Correct" : attempt.timedOut ? "Timed out" : attempt.correct === false ? "Incorrect" : "Completed"}</span></article>)}</div>
+            : history.plays.length ? <>
+              <div className="mt-5 space-y-3">{history.plays.map(play => <article key={play.id} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h3 className="font-black text-slate-900">{play.level || "Institution practice"} <span className="text-slate-300">/</span> {play.subject || "Learning area"}</h3><p className="mt-1 text-xs font-semibold text-slate-500">{new Date(play.completedAt).toLocaleString()} <span className="mx-1 text-slate-300">·</span> {play.questionCount} {play.questionCount === 1 ? "question" : "questions"}</p></div><span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{play.correctCount} / {play.questionCount} correct</span></div><details className="group mt-4 border-t border-slate-100 pt-3"><summary className="cursor-pointer list-none text-sm font-black text-purple-700 marker:hidden">Review answers <span className="ml-1 text-xs font-semibold text-slate-400">({play.attempts?.length || 0})</span><span className="float-right transition group-open:rotate-180">⌄</span></summary><div className="mt-2 divide-y divide-slate-100">{(play.attempts || []).map((attempt, index) => <div key={attempt.id} className="flex flex-wrap items-start justify-between gap-3 py-3"><div className="min-w-0 flex-1"><div className="rich-content text-sm font-bold leading-6 text-slate-900"><span>{index + 1}. </span><span dangerouslySetInnerHTML={{ __html: attempt.question || "Question no longer available" }} /></div>{attempt.selectedOption && <div className="rich-content mt-1 text-sm text-slate-600"><span className="font-semibold">Your answer: </span><span dangerouslySetInnerHTML={{ __html: attempt.selectedOption }} /></div>}</div><span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${attempt.correct === true ? "bg-emerald-100 text-emerald-700" : attempt.timedOut ? "bg-amber-100 text-amber-700" : attempt.correct === false ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"}`}>{attempt.correct === true ? "Correct" : attempt.timedOut ? "Timed out" : attempt.correct === false ? "Incorrect" : "Completed"}</span></div>)}</div></details></article>)}</div>
               <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-4 text-sm text-slate-500"><span>Page {history.pagination.page} of {Math.max(1, Math.ceil(history.pagination.total / history.pagination.limit))}</span><div className="flex gap-2"><button type="button" disabled={historyPage <= 1} onClick={() => setHistoryPage(value => Math.max(1, value - 1))} className="rounded-lg border border-slate-200 px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40">Previous</button><button type="button" disabled={historyPage * history.pagination.limit >= history.pagination.total} onClick={() => setHistoryPage(value => value + 1)} className="rounded-lg border border-slate-200 px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40">Next</button></div></div>
             </> : <div className="mt-5 rounded-2xl border-2 border-dashed border-purple-100 p-8 text-center"><p className="font-bold text-slate-700">No completed practice yet</p><p className="mt-1 text-sm text-slate-500">Your completed questions from this institution will appear here.</p></div>}
         </section>
@@ -139,6 +160,12 @@ export default function InstitutionLearning() {
 function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onClose, onCompleted, institutionId }) {
   const [review, setReview] = useState({ loading: false, reviews: [], error: "" });
   const [reviewReload, setReviewReload] = useState(0);
+  const [actionRules, setActionRules] = useState({});
+  const [actionBusy, setActionBusy] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [hiddenOptionOrders, setHiddenOptionOrders] = useState([]);
+  const [revealedOptionOrder, setRevealedOptionOrder] = useState(null);
+  const [usedActions, setUsedActions] = useState([]);
   const currentQuestion = session.questions[session.current];
   const attemptKey = useRef("");
   const advanceTimer = useRef(null);
@@ -149,6 +176,22 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
   const initialQuestionIndex = useRef(session.current);
   const base = `/institutions/my-learning/${encodeURIComponent(institutionId)}/questions/${encodeURIComponent(currentQuestion.id)}`;
   const patch = useCallback(values => setSession(current => current ? { ...current, ...values } : current), [setSession]);
+  useEffect(() => {
+    let active = true;
+    apiRequest("/gameplay/actions").then(response => {
+      if (active) setActionRules(Object.fromEntries((response.actions || []).filter(action => action.is_active).map(action => [action.event_key, action])));
+    }).catch(() => { if (active) setActionRules({}); });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    setHiddenOptionOrders([]);
+    setRevealedOptionOrder(null);
+    setActionError("");
+  }, [session.current]);
+  const applyPlayResult = result => {
+    cacheWallet({ coins_count: result.coinBalance, lives_remaining: result.livesRemaining, max_lives: result.maxLives, refill_coin_cost: result.refillCoinCost });
+    window.dispatchEvent(new Event("cedugames:wallet-updated"));
+  };
   const startQuestionRef = useRef(null);
   const timeoutQuestionRef = useRef(null);
   const startQuestion = async questionIndex => {
@@ -161,7 +204,7 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
     if (!attemptKey.current) attemptKey.current = window.crypto?.randomUUID?.() || makeUuid();
     const questionPath = `/institutions/my-learning/${encodeURIComponent(institutionId)}/questions/${encodeURIComponent(question.id)}`;
     try {
-      const response = await apiRequest(`${questionPath}/start`, { method: "POST", body: JSON.stringify({ attemptKey: attemptKey.current }) });
+      const response = await apiRequest(`${questionPath}/start`, { method: "POST", body: JSON.stringify({ attemptKey: attemptKey.current, playId: session.playId }) });
       const expiresAt = new Date(response.attempt.expires_at).getTime();
       startRequested.current = false;
       if (!isMounted.current) return;
@@ -169,11 +212,25 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
     } catch (requestError) { startRequested.current = false; if (isMounted.current) patch({ phase: "error", error: requestError.message || "This question could not be started." }); }
   };
   startQuestionRef.current = startQuestion;
-  const finishPractice = correct => {
+  const finishPractice = async correct => {
+    let historySaveError = "";
+    let gameplayResult = null;
+    try {
+      gameplayResult = await apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/practice/complete`, { method: "POST", body: JSON.stringify({ playId: session.playId }) });
+      applyPlayResult(gameplayResult);
+    } catch (error) { historySaveError = error.message || "Your play result could not be saved."; }
     stopBackgroundMusic();
     if (soundOn) playGameEndSound(correct >= Math.ceil(session.questions.length / 2));
-    patch({ phase: "complete" });
+    patch({ phase: "complete", historySaveError, gameplayResult });
     onCompleted();
+  };
+  const retryHistorySave = async () => {
+    try {
+      const gameplayResult = await apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/practice/complete`, { method: "POST", body: JSON.stringify({ playId: session.playId }) });
+      applyPlayResult(gameplayResult);
+      patch({ historySaveError: "", gameplayResult });
+      onCompleted();
+    } catch (error) { patch({ historySaveError: error.message || "Your play could not be saved to learning history." }); }
   };
   const goNext = (next, correct = session.correct) => {
     if (next >= session.questions.length) { finishPractice(correct); return; }
@@ -184,6 +241,34 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
     const nextCorrect = session.correct + (correct ? 1 : 0);
     patch({ phase: "feedback", selected, correct: nextCorrect, lastCorrect: correct, timedOut: false });
     advanceTimer.current = window.setTimeout(() => goNext(session.current + 1, nextCorrect), 1500);
+  };
+  const useLifeline = async eventKey => {
+    if (session.phase !== "playing" || !session.attempt || session.selected !== null || actionBusy || answerRequested.current || timeoutRequested.current) return;
+    const usedKey = `${currentQuestion.id}:${eventKey}`;
+    if (usedActions.includes(usedKey)) return;
+    setActionBusy(eventKey);
+    setActionError("");
+    patch({ phase: "checking" });
+    try {
+      const response = await apiRequest(`${base}/action`, {
+        method: "POST",
+        body: JSON.stringify({ actionId: window.crypto?.randomUUID?.() || makeUuid(), playId: session.playId, attemptId: session.attempt.id, eventKey }),
+      });
+      if (!isMounted.current) return;
+      setUsedActions(actions => [...actions, usedKey]);
+      cacheWallet({ coins_count: response.coinBalance });
+      window.dispatchEvent(new Event("cedugames:wallet-updated"));
+      if (response.removedOptionOrder !== undefined) setHiddenOptionOrders(orders => [...orders, Number(response.removedOptionOrder)]);
+      if (response.correctOptionOrder !== undefined) setRevealedOptionOrder(Number(response.correctOptionOrder));
+      if (eventKey === "question_skipped") {
+        patch({ reviewAttemptIds: [...(session.reviewAttemptIds || []), session.attempt.id], phase: "playing" });
+        goNext(session.current + 1, session.correct);
+      } else patch({ phase: "playing" });
+    } catch (requestError) {
+      if (!isMounted.current) return;
+      setActionError(requestError.message || "That lifeline could not be used.");
+      patch({ phase: "playing" });
+    } finally { setActionBusy(""); }
   };
   const answer = async optionIndex => {
     if (session.phase !== "playing" || !session.attempt || answerRequested.current || timeoutRequested.current) return;
@@ -260,7 +345,7 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
     <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-xs font-black uppercase tracking-widest text-fuchsia-300">{session.levelName} · {session.title}</p><p className="mt-1 text-sm font-bold">{session.phase === "complete" ? "Practice complete" : `Question ${session.current + 1} of ${session.questions.length}`}</p></div><div className="flex shrink-0 gap-2"><button type="button" onClick={onToggleSound} className="min-h-11 rounded-xl border border-white/20 bg-white/10 px-3 text-sm font-bold" aria-pressed={soundOn}>{soundOn ? "🔊 Sound on" : "🔇 Sound off"}</button><button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold">Exit</button></div></div>
     <div className="mx-auto mt-4 h-2 w-full max-w-3xl overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-fuchsia-400 transition-all" style={{ width: `${progress}%` }} /></div>
     {session.phase === "complete" ? <div className="mx-auto my-6 w-full max-w-5xl space-y-5">
-      <section className="rounded-3xl bg-white p-7 text-center text-slate-900 shadow-2xl sm:p-10"><div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-100 text-4xl text-emerald-700">{session.correct === session.questions.length ? "?" : "?"}</div><p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 sm:text-xs">Practice complete</p><h2 className="mt-2 text-3xl font-black">Nice work!</h2><p className="mt-3 text-slate-600">You answered {session.correct} of {session.questions.length} questions correctly.</p><button type="button" onClick={onClose} className="mt-7 rounded-xl bg-purple-600 px-6 py-3 font-black text-white">Back to learning areas</button></section>
+      <section className="rounded-3xl bg-white p-7 text-center text-slate-900 shadow-2xl sm:p-10"><div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-100 text-4xl text-emerald-700">{session.correct === session.questions.length ? "?" : "?"}</div><p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 sm:text-xs">Practice complete</p><h2 className="mt-2 text-3xl font-black">Nice work!</h2><p className="mt-3 text-slate-600">You answered {session.correct} of {session.questions.length} questions correctly.</p>{session.gameplayResult && <p className={`mx-auto mt-4 max-w-lg rounded-xl p-3 text-sm font-bold ${session.gameplayResult.passed ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>{session.gameplayResult.passed ? `You passed. ${session.gameplayResult.passingScorePercent}% is needed to pass.` : `One life was used because your score was below ${session.gameplayResult.passingScorePercent}%.`}{session.gameplayResult.refilled ? ` ${Number(session.gameplayResult.refillCoinCost).toLocaleString()} coins automatically refilled your lives.` : session.gameplayResult.needsPurchase ? " You have no lives left and not enough coins to refill." : ""}</p>}{session.historySaveError && <div role="alert" className="mx-auto mt-5 max-w-lg rounded-xl border border-amber-200 bg-amber-50 p-3 text-left text-sm font-semibold text-amber-800"><p>{session.historySaveError}</p><button type="button" onClick={() => void retryHistorySave()} className="mt-2 font-black underline">Retry saving this play and result</button></div>}<button type="button" onClick={onClose} className="mt-7 rounded-xl bg-purple-600 px-6 py-3 font-black text-white">Back to learning areas</button></section>
       {review.loading && <section role="status" className="rounded-3xl bg-white p-6 text-center text-sm font-semibold text-slate-500 shadow-xl">Loading your answer review...</section>}
       {review.error && <section className="rounded-3xl border border-red-100 bg-white p-6 text-center shadow-xl"><p role="alert" className="text-sm font-semibold text-red-700">{review.error}</p><button type="button" onClick={() => setReviewReload(value => value + 1)} className="mt-3 rounded-xl border border-red-200 px-4 py-2 text-sm font-black text-red-700">Try again</button></section>}
       {!review.loading && !review.error && review.reviews.length > 0 && <section className="rounded-3xl bg-white p-5 text-slate-900 shadow-xl sm:p-7"><div className="mb-5"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 sm:text-xs">Practice recap</p><h2 className="mt-1 text-xl font-black sm:text-2xl">Review your answers</h2><p className="mt-1 text-sm text-slate-500">See your choice, the correct answer, and any explanation.</p></div><div className="space-y-4">{session.questions.map((question, questionIndex) => { const item = reviewByQuestion.get(question.id); if (!item) return <article key={question.id} className="rounded-2xl border border-slate-200 p-4"><p className="font-bold text-slate-900">{questionIndex + 1}. <span className="rich-content" dangerouslySetInnerHTML={{ __html: question.text || "Question" }} /></p><p className="mt-2 text-sm text-amber-700">Answer review is unavailable for this question.</p></article>; return <article key={question.id} className={`rounded-2xl border p-4 sm:p-5 ${item.correct ? "border-emerald-200 bg-emerald-50/50" : item.timedOut ? "border-amber-200 bg-amber-50/50" : "border-slate-200 bg-slate-50/70"}`}><div className="flex flex-wrap items-start justify-between gap-3"><p className="min-w-0 flex-1 font-bold leading-6 text-slate-900">{questionIndex + 1}. <span className="rich-content" dangerouslySetInnerHTML={{ __html: question.text || "Question" }} /></p><span className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-black ${item.correct ? "bg-emerald-100 text-emerald-700" : item.timedOut ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-700"}`}>{item.correct ? "Correct" : item.timedOut ? "Timed out" : "Incorrect"}</span></div>{question.mediaUrl && <Media url={question.mediaUrl} type={question.mediaType} />}<div className="mt-4 grid gap-2 sm:grid-cols-2">{(question.options || []).map((option, optionIndex) => { const isCorrect = optionIndex === item.correctOptionOrder; const isSelected = optionIndex === item.selectedOptionOrder; return <div key={optionIndex} className={`rounded-xl border px-3 py-3 text-sm ${isCorrect ? "border-emerald-300 bg-emerald-100 text-emerald-900" : isSelected ? "border-red-200 bg-red-50 text-red-800" : "border-slate-200 bg-white text-slate-700"}`}><span className="mr-2 font-black">{String.fromCharCode(65 + optionIndex)}.</span><span className="rich-content" dangerouslySetInnerHTML={{ __html: option.text || "Option" }} />{option.shapeType && <Shape type={option.shapeType} color={option.shapeColor} compact />}{option.mediaUrl && <Media url={option.mediaUrl} type={option.mediaType} />}<span className="ml-2 block text-[11px] font-black">{isCorrect ? "Correct answer" : isSelected ? "Your answer" : ""}</span></div>; })}</div>{item.explanation && <p className="mt-4 rounded-xl border border-purple-100 bg-white p-3 text-sm leading-6 text-slate-600"><strong className="text-slate-800">Explanation: </strong>{item.explanation}</p>}</article>; })}</div></section>}
@@ -274,7 +359,9 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
             <div className="rich-content mt-5 text-lg font-semibold leading-7 sm:text-xl" dangerouslySetInnerHTML={{ __html: currentQuestion.text || "" }} />
             {currentQuestion.shapeType && <Shape type={currentQuestion.shapeType} color={currentQuestion.shapeColor} />}
             {currentQuestion.mediaUrl && <Media url={currentQuestion.mediaUrl} type={currentQuestion.mediaType} />}
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">{(currentQuestion.options || []).map((option, index) => <div key={index} className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${session.selected === index ? session.phase === "feedback" && session.lastCorrect ? "border-emerald-400 bg-emerald-50" : session.phase === "feedback" ? "border-red-300 bg-red-50" : "border-purple-400 bg-purple-50" : "border-slate-200 bg-white"}`}><button type="button" disabled={session.phase !== "playing"} onClick={() => void answer(index)} className="min-h-8 w-full text-left disabled:cursor-default"><span className="mr-2 font-black text-purple-700">{String.fromCharCode(65 + index)}.</span><span className="rich-content" dangerouslySetInnerHTML={{ __html: option.text || "" }} />{option.shapeType && <Shape type={option.shapeType} color={option.shapeColor} compact />}</button>{option.mediaUrl && <div className="mt-3"><Media url={option.mediaUrl} type={option.mediaType} /></div>}</div>)}</div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">{(currentQuestion.options || []).map((option, index) => hiddenOptionOrders.includes(index) ? null : <div key={index} className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${revealedOptionOrder === index ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-100" : session.selected === index ? session.phase === "feedback" && session.lastCorrect ? "border-emerald-400 bg-emerald-50" : session.phase === "feedback" ? "border-red-300 bg-red-50" : "border-purple-400 bg-purple-50" : "border-slate-200 bg-white"}`}><button type="button" disabled={session.phase !== "playing"} onClick={() => void answer(index)} className="min-h-8 w-full text-left disabled:cursor-default"><span className="mr-2 font-black text-purple-700">{String.fromCharCode(65 + index)}.</span><span className="rich-content" dangerouslySetInnerHTML={{ __html: option.text || "" }} />{option.shapeType && <Shape type={option.shapeType} color={option.shapeColor} compact />}{revealedOptionOrder === index && <span className="ml-2 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black uppercase text-emerald-700">Correct answer</span>}</button>{option.mediaUrl && <div className="mt-3"><Media url={option.mediaUrl} type={option.mediaType} /></div>}</div>)}</div>
+            <div className="mt-4 flex flex-wrap gap-2">{[["wrong_option_removed", "Remove wrong option"], ["answer_revealed", "Reveal answer"], ["question_skipped", "Skip question"]].map(([key, label]) => actionRules[key] && <button key={key} type="button" disabled={session.phase !== "playing" || session.selected !== null || Boolean(actionBusy) || usedActions.includes(`${currentQuestion.id}:${key}`)} onClick={() => void useLifeline(key)} className="min-h-10 rounded-full border border-purple-200 bg-white px-4 py-2 text-xs font-black text-purple-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{actionBusy === key ? "Processing…" : `${label} · ${Number(actionRules[key].amount).toLocaleString()} coins`}</button>)}</div>
+            {actionError && <p role="alert" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">{actionError}</p>}
             {session.phase === "checking" && <p role="status" className="mt-4 text-center text-sm font-bold text-slate-500">Checking your answer…</p>}
             {session.phase === "feedback" && <div role="status" aria-live="assertive" className={`mt-5 rounded-2xl p-4 text-center font-black ${session.timedOut ? "bg-amber-50 text-amber-700" : session.selected !== null && session.lastCorrect ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{session.timedOut ? "Time is up. Moving to the next question…" : session.selected !== null && session.lastCorrect ? "Correct answer!" : "Not quite. Moving to the next question…"}</div>}
             {session.error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{session.error}</p>}
