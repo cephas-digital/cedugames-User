@@ -7,7 +7,6 @@ import { apiRequest, assetUrl } from "../../services/api";
 export default function ProgramSelection() {
   const [items, setItems] = useState([]);
   const [memberships, setMemberships] = useState([]);
-  const [availableGames, setAvailableGames] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [membershipLoading, setMembershipLoading] = useState(true);
@@ -21,7 +20,6 @@ export default function ProgramSelection() {
     apiRequest("/institutions/my-learning")
       .then((data) => {
         setMemberships(data.memberships || []);
-        setAvailableGames(data.availableGames || []);
       })
       .catch(() => undefined)
       .finally(() => setMembershipLoading(false));
@@ -76,15 +74,16 @@ export default function ProgramSelection() {
             </div>
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-purple-600 text-xl font-black text-white transition group-hover:translate-x-1 sm:h-12 sm:w-12">-&gt;</span>
           </Link>
-          {!membershipLoading && memberships.length > 0 && <ProgramInstitutionMemberships memberships={memberships} availableGames={availableGames} onMembershipCanceled={(id) => setMemberships((current) => current.filter((membership) => membership.id !== id))} />}
+          {!membershipLoading && memberships.length > 0 && <ProgramInstitutionMemberships memberships={memberships} onMembershipCanceled={(id) => setMemberships((current) => current.filter((membership) => membership.id !== id))} />}
         </section>
       </main>
     </div>
   );
 }
 
-function ProgramInstitutionMemberships({ memberships, availableGames, onMembershipCanceled }) {
-  return <section className="mt-4 rounded-3xl border border-purple-100 bg-white p-4 shadow-sm sm:mt-6 sm:p-6"><div className="flex flex-wrap items-end justify-between gap-3"><div className="min-w-0"><p className="text-xs font-black uppercase tracking-wider text-purple-600">Learning together</p><h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">Your institutions</h2><p className="mt-1 text-sm leading-6 text-slate-500">Schools and learning centres connected to your account.</p></div><span className="shrink-0 rounded-full bg-purple-100 px-3 py-1 text-xs font-black text-purple-700">{memberships.length} connected - {availableGames.length} games</span></div><div className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2">{memberships.map((membership) => <ProgramInstitutionMembership key={membership.id || membership.institution_id} membership={membership} onCanceled={onMembershipCanceled} />)}</div></section>;
+function ProgramInstitutionMemberships({ memberships, onMembershipCanceled }) {
+  const connectedCount = memberships.filter((membership) => membership.status === "active").length;
+  return <section className="mt-4 rounded-3xl border border-purple-100 bg-white p-4 shadow-sm sm:mt-6 sm:p-6"><div className="flex flex-wrap items-end justify-between gap-3"><div className="min-w-0"><p className="text-xs font-black uppercase tracking-wider text-purple-600">Learning together</p><h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">Your institutions</h2><p className="mt-1 text-sm leading-6 text-slate-500">Schools and learning centres connected to this player profile.</p></div><span className="shrink-0 rounded-full bg-purple-100 px-3 py-1 text-xs font-black text-purple-700">{connectedCount} {connectedCount === 1 ? "institution" : "institutions"} connected</span></div><div className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2">{memberships.map((membership) => <ProgramInstitutionMembership key={membership.id || membership.institution_id} membership={membership} onCanceled={onMembershipCanceled} />)}</div></section>;
 }
 
 function ProgramInstitutionMembership({ membership, onCanceled }) {
@@ -100,7 +99,6 @@ function ProgramInstitutionMembership({ membership, onCanceled }) {
 function LegacyProgramSelection() {
   const [items, setItems] = useState([]);
   const [memberships, setMemberships] = useState([]);
-  const [availableGames, setAvailableGames] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [membershipLoading, setMembershipLoading] = useState(true);
