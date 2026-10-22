@@ -65,7 +65,7 @@ export default function InstitutionLearning() {
       const questions = response.questions || [];
       if (!questions.length) throw new Error("No published questions are available in this learning area yet.");
       if (soundOn) { playClickSound(); startBackgroundMusic(); }
-      setSession({ ...group, questions, current: 0, correct: 0, phase: "starting", selected: null, attempt: null, remaining: 0, error: "" });
+      setSession({ ...group, questions, current: 0, correct: 0, phase: "starting", selected: null, attempt: null, remaining: 0, error: "", reviewAttemptIds: [] });
     } catch (requestError) { setPracticeError(requestError.message || "Practice could not be started. Please try again."); } finally { setStartingArea(""); }
   };
   const closeSession = () => { stopBackgroundMusic(); setSession(null); };
@@ -137,6 +137,8 @@ export default function InstitutionLearning() {
 }
 
 function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onClose, onCompleted, institutionId }) {
+  const [review, setReview] = useState({ loading: false, reviews: [], error: "" });
+  const [reviewReload, setReviewReload] = useState(0);
   const currentQuestion = session.questions[session.current];
   const attemptKey = useRef("");
   const advanceTimer = useRef(null);
@@ -192,6 +194,7 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
       const response = await apiRequest(`${base}/answer`, { method: "POST", body: JSON.stringify({ optionIndex, attemptId: session.attempt.id }) });
       if (!isMounted.current) return;
       if (!response.correct) await apiRequest(`${base}/finish`, { method: "POST", body: JSON.stringify({ attemptId: session.attempt.id }) });
+      patch({ reviewAttemptIds: [...(session.reviewAttemptIds || []), session.attempt.id] });
       if (soundOn) response.correct ? playCorrectSound() : playWrongSound();
       showFeedback(Boolean(response.correct), optionIndex);
     } catch (requestError) {
@@ -208,12 +211,30 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
     try {
       await apiRequest(`${base}/finish`, { method: "POST", body: JSON.stringify({ attemptId: session.attempt?.id, timedOut: true }) });
       if (!isMounted.current) return;
+      patch({ reviewAttemptIds: [...(session.reviewAttemptIds || []), session.attempt.id] });
       if (soundOn) playWrongSound();
       patch({ phase: "feedback", selected: null, timedOut: true, lastCorrect: false });
       advanceTimer.current = window.setTimeout(() => goNext(session.current + 1, session.correct), 1500);
     } catch (requestError) { timeoutRequested.current = false; if (isMounted.current) patch({ phase: "error", error: requestError.message || "The timed question could not be completed." }); }
   };
   timeoutQuestionRef.current = timeoutQuestion;
+
+  useEffect(() => {
+    if (session.phase !== "complete" || !session.reviewAttemptIds?.length) return undefined;
+    const controller = new AbortController();
+    let active = true;
+    setReview(current => ({ ...current, loading: true, error: "" }));
+    apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/practice/review`, {
+      method: "POST",
+      body: JSON.stringify({ attemptIds: session.reviewAttemptIds }),
+      signal: controller.signal,
+    }).then(response => {
+      if (active) setReview({ loading: false, reviews: response.reviews || [], error: "" });
+    }).catch(error => {
+      if (active && error.name !== "AbortError") setReview({ loading: false, reviews: [], error: error.message || "Answer review could not be loaded." });
+    });
+    return () => { active = false; controller.abort(); };
+  }, [session.phase, session.reviewAttemptIds, institutionId, reviewReload]);
 
   useEffect(() => { isMounted.current = true; void startQuestionRef.current?.(initialQuestionIndex.current); return () => { isMounted.current = false; window.clearTimeout(advanceTimer.current); }; // Start only once, after the learner presses Start practice.
   }, []);
@@ -234,10 +255,16 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
   if (!currentQuestion) return null;
   const duration = Math.max(5, Math.min(600, Number(currentQuestion.timeLimitSeconds) || 30));
   const progress = session.phase === "complete" ? 100 : Math.round((session.current / session.questions.length) * 100);
+  const reviewByQuestion = new Map(review.reviews.map(item => [item.questionId, item]));
   return <div className="fixed inset-0 z-[90] flex flex-col overflow-y-auto bg-[#11152d] px-3 py-4 text-white sm:px-6 sm:py-7" role="dialog" aria-modal="true" aria-label={`${session.title} practice`}>
     <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-xs font-black uppercase tracking-widest text-fuchsia-300">{session.levelName} · {session.title}</p><p className="mt-1 text-sm font-bold">{session.phase === "complete" ? "Practice complete" : `Question ${session.current + 1} of ${session.questions.length}`}</p></div><div className="flex shrink-0 gap-2"><button type="button" onClick={onToggleSound} className="min-h-11 rounded-xl border border-white/20 bg-white/10 px-3 text-sm font-bold" aria-pressed={soundOn}>{soundOn ? "🔊 Sound on" : "🔇 Sound off"}</button><button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold">Exit</button></div></div>
     <div className="mx-auto mt-4 h-2 w-full max-w-3xl overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-fuchsia-400 transition-all" style={{ width: `${progress}%` }} /></div>
-    {session.phase === "complete" ? <section className="mx-auto my-auto w-full max-w-xl rounded-3xl bg-white p-7 text-center text-slate-900 shadow-2xl sm:p-10"><div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-100 text-4xl text-emerald-700">{session.correct === session.questions.length ? "★" : "✓"}</div><p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 sm:text-xs">Practice complete</p><h2 className="mt-2 text-3xl font-black">Nice work!</h2><p className="mt-3 text-slate-600">You answered {session.correct} of {session.questions.length} questions correctly.</p><button type="button" onClick={onClose} className="mt-7 rounded-xl bg-purple-600 px-6 py-3 font-black text-white">Back to learning areas</button></section>
+    {session.phase === "complete" ? <div className="mx-auto my-6 w-full max-w-5xl space-y-5">
+      <section className="rounded-3xl bg-white p-7 text-center text-slate-900 shadow-2xl sm:p-10"><div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-100 text-4xl text-emerald-700">{session.correct === session.questions.length ? "?" : "?"}</div><p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 sm:text-xs">Practice complete</p><h2 className="mt-2 text-3xl font-black">Nice work!</h2><p className="mt-3 text-slate-600">You answered {session.correct} of {session.questions.length} questions correctly.</p><button type="button" onClick={onClose} className="mt-7 rounded-xl bg-purple-600 px-6 py-3 font-black text-white">Back to learning areas</button></section>
+      {review.loading && <section role="status" className="rounded-3xl bg-white p-6 text-center text-sm font-semibold text-slate-500 shadow-xl">Loading your answer review...</section>}
+      {review.error && <section className="rounded-3xl border border-red-100 bg-white p-6 text-center shadow-xl"><p role="alert" className="text-sm font-semibold text-red-700">{review.error}</p><button type="button" onClick={() => setReviewReload(value => value + 1)} className="mt-3 rounded-xl border border-red-200 px-4 py-2 text-sm font-black text-red-700">Try again</button></section>}
+      {!review.loading && !review.error && review.reviews.length > 0 && <section className="rounded-3xl bg-white p-5 text-slate-900 shadow-xl sm:p-7"><div className="mb-5"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 sm:text-xs">Practice recap</p><h2 className="mt-1 text-xl font-black sm:text-2xl">Review your answers</h2><p className="mt-1 text-sm text-slate-500">See your choice, the correct answer, and any explanation.</p></div><div className="space-y-4">{session.questions.map((question, questionIndex) => { const item = reviewByQuestion.get(question.id); if (!item) return <article key={question.id} className="rounded-2xl border border-slate-200 p-4"><p className="font-bold text-slate-900">{questionIndex + 1}. <span className="rich-content" dangerouslySetInnerHTML={{ __html: question.text || "Question" }} /></p><p className="mt-2 text-sm text-amber-700">Answer review is unavailable for this question.</p></article>; return <article key={question.id} className={`rounded-2xl border p-4 sm:p-5 ${item.correct ? "border-emerald-200 bg-emerald-50/50" : item.timedOut ? "border-amber-200 bg-amber-50/50" : "border-slate-200 bg-slate-50/70"}`}><div className="flex flex-wrap items-start justify-between gap-3"><p className="min-w-0 flex-1 font-bold leading-6 text-slate-900">{questionIndex + 1}. <span className="rich-content" dangerouslySetInnerHTML={{ __html: question.text || "Question" }} /></p><span className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-black ${item.correct ? "bg-emerald-100 text-emerald-700" : item.timedOut ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-700"}`}>{item.correct ? "Correct" : item.timedOut ? "Timed out" : "Incorrect"}</span></div>{question.mediaUrl && <Media url={question.mediaUrl} type={question.mediaType} />}<div className="mt-4 grid gap-2 sm:grid-cols-2">{(question.options || []).map((option, optionIndex) => { const isCorrect = optionIndex === item.correctOptionOrder; const isSelected = optionIndex === item.selectedOptionOrder; return <div key={optionIndex} className={`rounded-xl border px-3 py-3 text-sm ${isCorrect ? "border-emerald-300 bg-emerald-100 text-emerald-900" : isSelected ? "border-red-200 bg-red-50 text-red-800" : "border-slate-200 bg-white text-slate-700"}`}><span className="mr-2 font-black">{String.fromCharCode(65 + optionIndex)}.</span><span className="rich-content" dangerouslySetInnerHTML={{ __html: option.text || "Option" }} />{option.shapeType && <Shape type={option.shapeType} color={option.shapeColor} compact />}{option.mediaUrl && <Media url={option.mediaUrl} type={option.mediaType} />}<span className="ml-2 block text-[11px] font-black">{isCorrect ? "Correct answer" : isSelected ? "Your answer" : ""}</span></div>; })}</div>{item.explanation && <p className="mt-4 rounded-xl border border-purple-100 bg-white p-3 text-sm leading-6 text-slate-600"><strong className="text-slate-800">Explanation: </strong>{item.explanation}</p>}</article>; })}</div></section>}
+    </div>
       : <section className="mx-auto my-6 w-full max-w-4xl rounded-3xl bg-white p-4 text-slate-900 shadow-2xl sm:my-8 sm:p-7 lg:p-9">
         {session.phase === "starting" ? <div className="py-16 text-center font-bold text-slate-500">Starting your timed question…</div>
           : session.phase === "error" ? <div className="py-10 text-center"><p role="alert" className="font-bold text-red-700">{session.error}</p><button type="button" onClick={() => { if (session.attempt && session.remaining <= 0) void timeoutQuestion(); else void startQuestion(session.current); }} className="mt-5 rounded-xl bg-purple-600 px-5 py-3 font-black text-white">Try again</button></div>
