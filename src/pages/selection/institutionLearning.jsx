@@ -104,7 +104,7 @@ export default function InstitutionLearning() {
         <header className="relative isolate mt-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-700 via-purple-600 to-fuchsia-500 px-6 py-8 text-white shadow-[0_24px_60px_-30px_rgba(83,45,145,.55)] sm:px-10 sm:py-10 lg:mt-6 lg:flex lg:min-h-64 lg:items-center lg:justify-between lg:px-14 lg:py-12">
           <div className="pointer-events-none absolute -right-20 -top-28 -z-10 h-80 w-80 rounded-full border border-white/10 bg-white/5 shadow-[0_0_0_35px_rgba(255,255,255,.035),0_0_0_70px_rgba(255,255,255,.025)]" />
           <div className="relative max-w-3xl">
-          <p className="text-xs font-black uppercase tracking-widest">CEDU-LEARN | YOUR INSTITUTION</p>
+          <p className="hidden text-xs font-black uppercase tracking-widest sm:block">CEDU-LEARN | YOUR INSTITUTION</p>
           <h1 className="mt-3 break-words text-3xl font-black leading-tight tracking-tight sm:text-5xl lg:text-[3.5rem]">{data.institution.name}</h1>
           <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-white/90 sm:text-base">Choose a learning area when you are ready. Your timer starts after you press Start practice.</p>
           {(data.institution.city || data.institution.state) && <p className="mt-3 break-words text-sm text-white/75">{[data.institution.city, data.institution.state].filter(Boolean).join(", ")}</p>}
@@ -115,7 +115,7 @@ export default function InstitutionLearning() {
           : <section className="mt-7 overflow-hidden rounded-[2rem] border border-purple-100/80 bg-white shadow-[0_18px_55px_-38px_rgba(51,38,84,.38)] lg:mt-8">
             <div className="border-b border-slate-100 bg-gradient-to-r from-white via-white to-purple-50/80 p-5 sm:p-8 lg:px-10 lg:py-9">
               <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
-                <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 sm:text-xs">Your learning path</p><h2 className="mt-1 text-xl font-black leading-tight tracking-tight text-slate-900 sm:text-2xl">Choose where to begin</h2><p className="mt-1 max-w-prose text-sm leading-6 text-slate-600">Pick {labels.category.toLowerCase()}, then {labels.level.toLowerCase()}, then {labels.subject.toLowerCase()}.</p></div>
+                <div><p className="hidden text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 sm:block sm:text-xs">Your learning path</p><h2 className="text-xl font-black leading-tight tracking-tight text-slate-900 sm:mt-1 sm:text-2xl">Choose where to begin</h2><p className="mt-1 max-w-prose text-sm leading-6 text-slate-600">Pick {labels.category.toLowerCase()}, then {labels.level.toLowerCase()}, then {labels.subject.toLowerCase()}.</p></div>
                 <span className="inline-flex max-w-full rounded-full bg-purple-100 px-3 py-1.5 text-xs font-black leading-5 text-purple-700">Up to {data.institution.questionsPerPlay || 10} questions per play · shuffled</span>
               </div>
               <div aria-label="Learning path steps" className="mt-4 flex w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-2 text-[11px] font-bold sm:mt-5 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0 sm:text-xs">
@@ -143,7 +143,7 @@ export default function InstitutionLearning() {
             </div>
           </section>}
         <section id="learning-history" className="mt-8 scroll-mt-6 rounded-[2rem] border border-purple-100/80 bg-white p-5 shadow-[0_18px_55px_-38px_rgba(51,38,84,.32)] sm:p-8 lg:mt-10 lg:px-10 lg:py-9">
-          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-purple-600">This institution</p><h2 className="mt-1 text-2xl font-black text-slate-900">Your learning history</h2><p className="mt-1 text-sm text-slate-500">Completed practice plays from {data.institution.name}, for this player profile. History is kept for 30 days.</p></div><span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-black text-purple-700">{history.pagination.total} {history.pagination.total === 1 ? "play" : "plays"}</span></div>
+          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="hidden text-xs font-black uppercase tracking-wider text-purple-600 sm:block">This institution</p><h2 className="text-2xl font-black text-slate-900 sm:mt-1">Your learning history</h2><p className="mt-1 text-sm text-slate-500">Completed practice plays from {data.institution.name}, for this player profile. History is kept for 30 days.</p></div><span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-black text-purple-700">{history.pagination.total} {history.pagination.total === 1 ? "play" : "plays"}</span></div>
           {historyLoading ? <p role="status" className="mt-5 rounded-xl bg-slate-50 p-5 text-sm font-semibold text-slate-500">Loading your learning history...</p>
             : historyError ? <div className="mt-5 rounded-xl bg-red-50 p-5 text-sm font-semibold text-red-700"><p role="alert">{historyError}</p><button type="button" onClick={() => setHistoryRefresh(value => value + 1)} className="mt-3 rounded-lg bg-white px-4 py-2 font-black text-red-700">Try again</button></div>
             : history.plays.length ? <>
