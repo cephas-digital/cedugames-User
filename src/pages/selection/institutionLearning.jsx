@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Navbar from "../../components/navbar";
 import PageLoader from "../../components/PageLoader";
@@ -47,18 +47,76 @@ export default function InstitutionLearning() {
 }
 
 function InstitutionQuestionCard({ question, index, institutionId }) {
+  const [startedAt, setStartedAt] = useState(null);
+  const [attemptId, setAttemptId] = useState("");
+  const [starting, setStarting] = useState(false);
+  const [remaining, setRemaining] = useState(Number(question.timeLimitSeconds) || 30);
+  const [timedOut, setTimedOut] = useState(false);
+  const articleRef = useRef(null);
+  const timeoutHandledRef = useRef(false);
+  const startRequestedRef = useRef(false);
+  const attemptKeyRef = useRef("");
   const [selected, setSelected] = useState(null);
   const [result, setResult] = useState(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
+  const startAttempt = async () => {
+    if (startRequestedRef.current) return;
+    startRequestedRef.current = true;
+    setStarting(true);
+    setError("");
+    try {
+      if (!attemptKeyRef.current) {
+        const fallbackUuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, character => {
+          const random = Math.floor(Math.random() * 16);
+          return (character === "x" ? random : (random & 0x3) | 0x8).toString(16);
+        });
+        attemptKeyRef.current = window.crypto?.randomUUID?.() || fallbackUuid;
+      }
+      const response = await apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/questions/${encodeURIComponent(question.id)}/start`, { method: "POST", body: JSON.stringify({ attemptKey: attemptKeyRef.current }) });
+      setAttemptId(response.attempt.id);
+      setStartedAt(new Date(response.attempt.started_at).getTime());
+      setRemaining(Math.max(0, Math.ceil((new Date(response.attempt.expires_at).getTime() - Date.now()) / 1000)));
+    } catch (requestError) {
+      startRequestedRef.current = false;
+      setError(requestError.message || "This question timer could not be started. Please try again.");
+    } finally { setStarting(false); }
+  };
+  useEffect(() => {
+    const node = articleRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") { void startAttempt(); return undefined; }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { void startAttempt(); observer.disconnect(); }
+    }, { threshold: 0.2 });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [question.id]);
+  useEffect(() => {
+    if (!startedAt || timedOut || result?.correct) return undefined;
+    const duration = Math.max(5, Math.min(600, Number(question.timeLimitSeconds) || 30));
+    const expiresAt = startedAt + duration * 1000;
+    const tick = () => {
+      const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      setRemaining(seconds);
+      if (seconds === 0) {
+        if (!timeoutHandledRef.current) {
+          timeoutHandledRef.current = true;
+          setTimedOut(true);
+        }
+      }
+    };
+    tick();
+    const timer = window.setInterval(tick, 250);
+    return () => window.clearInterval(timer);
+  }, [startedAt, question.timeLimitSeconds, timedOut, result?.correct, selected, checking]);
   const checkAnswer = async () => {
     if (selected === null || checking || result?.correct) return;
     setChecking(true);
     setError("");
     try {
-      const response = await apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/questions/${encodeURIComponent(question.id)}/answer`, { method: "POST", body: JSON.stringify({ optionIndex: selected }) });
+      const response = await apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/questions/${encodeURIComponent(question.id)}/answer`, { method: "POST", body: JSON.stringify({ optionIndex: selected, attemptId }) });
       setResult(response);
-    } catch (requestError) { setError(requestError.message); }
+    } catch (requestError) { if (requestError.message?.toLowerCase().includes("time limit")) setTimedOut(true); setError(requestError.message); }
     finally { setChecking(false); }
   };
   const speak = () => {
@@ -67,13 +125,15 @@ function InstitutionQuestionCard({ question, index, institutionId }) {
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(`${plainText(question.text)}. ${answerText}`));
   };
-  return <article className="rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-5">
+  const duration = Math.max(5, Math.min(600, Number(question.timeLimitSeconds) || 30));
+  return <article ref={articleRef} className="rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-5">
     <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-black uppercase tracking-wider text-purple-600">{question.subject} - Question {index + 1}</p>{question.readAloud && <button type="button" onClick={speak} className="rounded-lg border border-purple-200 bg-white px-3 py-2 text-xs font-bold text-purple-700">Read aloud</button>}</div>
+    <div className="mt-3 rounded-xl border border-purple-100 bg-white p-3"><div className="mb-2 flex items-center justify-between text-xs font-black"><span>{timedOut ? "Time is up" : "Time remaining"}</span><span className={remaining <= Math.min(10, Math.ceil(duration / 4)) ? "text-red-600" : "text-purple-700"}>{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-full transition-[width] duration-200 ${remaining <= Math.min(10, Math.ceil(duration / 4)) ? "bg-red-500" : "bg-purple-500"}`} style={{ width: `${Math.max(0, remaining / duration * 100)}%` }} /></div></div>
     <div className="rich-content mt-3 font-semibold leading-7 text-slate-900" dangerouslySetInnerHTML={{ __html: question.text || "" }} />
     {question.shapeType && <QuestionShape type={question.shapeType} color={question.shapeColor} />}
     {question.mediaUrl && <QuestionMedia url={question.mediaUrl} type={question.mediaType} />}
-    <div className="mt-4 grid gap-3 sm:grid-cols-2">{(question.options || []).map((option, optionIndex) => <div key={optionIndex} className={`rounded-xl border p-3 transition ${selected === optionIndex ? result?.correct ? "border-emerald-400 bg-emerald-50" : result?.correct === false ? "border-red-300 bg-red-50" : "border-purple-400 bg-purple-50" : "border-slate-200 bg-white"}`}><button type="button" onClick={() => { if (!result?.correct) { setSelected(optionIndex); setResult(null); setError(""); } }} disabled={Boolean(result?.correct)} aria-pressed={selected === optionIndex} className="w-full text-left"><span className="mr-2 font-black text-purple-700">{String.fromCharCode(65 + optionIndex)}.</span><span className="rich-content" dangerouslySetInnerHTML={{ __html: option.text || "" }} />{option.shapeType && <QuestionShape type={option.shapeType} color={option.shapeColor} compact />}</button>{option.mediaUrl && <QuestionMedia url={option.mediaUrl} type={option.mediaType} />}</div>)}</div>
-    <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={checkAnswer} disabled={selected === null || checking || Boolean(result?.correct)} className="rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">{checking ? "Checking..." : result?.correct ? "Correct" : "Check answer"}</button>{result?.correct === false && <span role="status" className="text-sm font-bold text-red-700">Not quite. Choose another answer and try again.</span>}{result?.correct && <span role="status" className="text-sm font-bold text-emerald-700">Correct answer!</span>}{error && <span role="alert" className="text-sm font-semibold text-red-700">{error}</span>}</div>
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">{(question.options || []).map((option, optionIndex) => <div key={optionIndex} className={`rounded-xl border p-3 transition ${selected === optionIndex ? result?.correct ? "border-emerald-400 bg-emerald-50" : result?.correct === false ? "border-red-300 bg-red-50" : "border-purple-400 bg-purple-50" : "border-slate-200 bg-white"}`}><button type="button" onClick={() => { if (!result?.correct && !timedOut) { setSelected(optionIndex); setResult(null); setError(""); } }} disabled={Boolean(result?.correct) || timedOut} aria-pressed={selected === optionIndex} className="w-full text-left"><span className="mr-2 font-black text-purple-700">{String.fromCharCode(65 + optionIndex)}.</span><span className="rich-content" dangerouslySetInnerHTML={{ __html: option.text || "" }} />{option.shapeType && <QuestionShape type={option.shapeType} color={option.shapeColor} compact />}</button>{option.mediaUrl && <QuestionMedia url={option.mediaUrl} type={option.mediaType} />}</div>)}</div>
+    <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={checkAnswer} disabled={!attemptId || starting || selected === null || checking || Boolean(result?.correct) || timedOut} className="rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">{starting ? "Starting timer..." : checking ? "Checking..." : result?.correct ? "Correct" : "Check answer"}</button>{!attemptId && error && <button type="button" onClick={startAttempt} disabled={starting} className="rounded-xl border border-purple-200 bg-white px-4 py-2.5 text-sm font-bold text-purple-700 disabled:opacity-50">Retry timer</button>}{result?.correct === false && !timedOut && <span role="status" className="text-sm font-bold text-red-700">Not quite. Choose another answer and try again.</span>}{timedOut && !result?.correct && <span role="status" className="text-sm font-bold text-red-700">This question’s time limit ended.</span>}{result?.correct && <span role="status" className="text-sm font-bold text-emerald-700">Correct answer!</span>}{error && <span role="alert" className="text-sm font-semibold text-red-700">{error}</span>}</div>
     {result?.correct && result.explanation && <div className="mt-4 rounded-xl bg-white p-4"><strong className="text-sm text-slate-900">Explanation</strong><p className="mt-1 text-sm leading-6 text-slate-600">{result.explanation}</p></div>}
   </article>;
 }
