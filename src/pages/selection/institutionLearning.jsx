@@ -20,7 +20,11 @@ export default function InstitutionLearning() {
   const [history, setHistory] = useState({ requestKey: "", attempts: [], pagination: { page: 1, limit: 10, total: 0 }, error: "" });
   const [historyPage, setHistoryPage] = useState(1);
   const [historyRefresh, setHistoryRefresh] = useState(0);
-
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedLevelId, setSelectedLevelId] = useState("");
+  const [startingArea, setStartingArea] = useState("");
+  const [practiceError, setPracticeError] = useState("");
+  useEffect(() => { setSelectedCategory(""); setSelectedLevelId(""); setPracticeError(""); }, [institutionId]);
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -41,16 +45,28 @@ export default function InstitutionLearning() {
   const historyError = historyLoading ? "" : history.error;
   const view = resource.institutionId === institutionId ? resource : { data: null, error: "", loading: true };
   const { data, error, loading = false } = view;
+  const labels = data?.labels || { category: "Section", level: "Class", learner: "Learners", subject: "Learning areas" };
+  const categoryNames = [...new Set((data?.levels || []).map(level => level.category || "Learning group"))];
+  const levelsInCategory = (data?.levels || []).filter(level => (level.category || "Learning group") === selectedCategory);
+  const selectedLevel = levelsInCategory.find(level => level.id === selectedLevelId);
+  const learningAreas = selectedLevel ? (() => { const map = new Map((data.learningAreas || []).filter(area => area.levelId === selectedLevel.id).map(area => [area.name, Number(area.questionCount) || 0])); (selectedLevel.subjects || []).forEach(subject => { if (!map.has(subject)) map.set(subject, 0); }); if (!map.size) map.set("General", 0); return [...map.entries()]; })() : [];
   useEffect(() => {
     if (!loading && data && window.location.hash === "#learning-history") {
       window.requestAnimationFrame(() => document.getElementById("learning-history")?.scrollIntoView({ behavior: "smooth" }));
     }
   }, [loading, data]);
 
-  const startPractice = group => {
-    if (!group.questions.length) return;
-    if (soundOn) { playClickSound(); startBackgroundMusic(); }
-    setSession({ ...group, current: 0, correct: 0, phase: "starting", selected: null, attempt: null, remaining: 0, error: "" });
+  const startPractice = async group => {
+    const areaKey = `${group.levelId}:${group.title}`;
+    if (!group.questionCount || startingArea) return;
+    setStartingArea(areaKey); setPracticeError("");
+    try {
+      const response = await apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/practice`, { method: "POST", body: JSON.stringify({ levelId: group.levelId, subject: group.title }) });
+      const questions = response.questions || [];
+      if (!questions.length) throw new Error("No published questions are available in this learning area yet.");
+      if (soundOn) { playClickSound(); startBackgroundMusic(); }
+      setSession({ ...group, questions, current: 0, correct: 0, phase: "starting", selected: null, attempt: null, remaining: 0, error: "" });
+    } catch (requestError) { setPracticeError(requestError.message || "Practice could not be started. Please try again."); } finally { setStartingArea(""); }
   };
   const closeSession = () => { stopBackgroundMusic(); setSession(null); };
   const toggleSound = () => {
@@ -74,21 +90,33 @@ export default function InstitutionLearning() {
           {(data.institution.city || data.institution.state) && <p className="mt-2 text-sm text-white/75">{[data.institution.city, data.institution.state].filter(Boolean).join(", ")}</p>}
         </header>
         {!data.levels.length ? <section className="mt-6 rounded-3xl border border-purple-100 bg-white p-8 text-center"><h2 className="text-xl font-black text-slate-900">Your learning plan is being prepared</h2><p className="mt-2 text-slate-500">Your institution has not published any learning groups yet.</p></section>
-          : <div className="mt-6 space-y-5">{data.levels.map(level => {
-            const levelQuestions = data.questions.filter(question => question.levelId === level.id);
-            const bySubject = new Map();
-            levelQuestions.forEach(question => {
-              const name = question.subject || "General";
-              if (!bySubject.has(name)) bySubject.set(name, []);
-              bySubject.get(name).push(question);
-            });
-            (level.subjects || []).forEach(subject => { if (!bySubject.has(subject)) bySubject.set(subject, []); });
-            if (!bySubject.size) bySubject.set("General", []);
-            return <section key={level.id} className="rounded-3xl border border-purple-100 bg-white p-5 shadow-sm sm:p-7">
-              <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-purple-600">{level.category || "Learning group"}</p><h2 className="mt-1 text-2xl font-black text-slate-900">{level.name}</h2>{level.code && <p className="mt-1 text-sm text-slate-500">{level.code}</p>}</div><span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-black text-purple-700">{levelQuestions.length} published {levelQuestions.length === 1 ? "question" : "questions"}</span></div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">{[...bySubject.entries()].map(([subject, questions]) => <article key={subject} className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:flex-row sm:items-center"><div><p className="text-xs font-black uppercase tracking-wide text-purple-600">Learning area</p><h3 className="mt-1 text-lg font-black text-slate-900">{subject}</h3><p className="mt-1 text-sm text-slate-500">{questions.length ? `${questions.length} question${questions.length === 1 ? "" : "s"} · timed practice` : "No published questions yet"}</p></div><button type="button" disabled={!questions.length} onClick={() => startPractice({ title: subject, levelName: level.name, questions })} className="shrink-0 rounded-xl bg-purple-600 px-5 py-3 text-sm font-black text-white shadow-md transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-slate-300">{questions.length ? "Start practice →" : "Coming soon"}</button></article>)}</div>
-            </section>;
-          })}</div>}
+          : <section className="mt-6 overflow-hidden rounded-3xl border border-purple-100 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-white to-purple-50/70 p-5 sm:p-7">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div><p className="text-xs font-black uppercase tracking-widest text-purple-600">Your learning path</p><h2 className="mt-1 text-2xl font-black text-slate-900">Choose where to begin</h2><p className="mt-1 text-sm text-slate-500">Pick {labels.category.toLowerCase()}, then {labels.level.toLowerCase()}, then {labels.subject.toLowerCase()}.</p></div>
+                <span className="rounded-full bg-purple-100 px-3 py-1.5 text-xs font-black text-purple-700">Up to {data.institution.questionsPerPlay || 10} questions per play &middot; shuffled</span>
+              </div>
+              <div className="mt-5 flex flex-wrap items-center gap-2 text-xs font-bold">
+                <span className={`rounded-full px-3 py-1.5 ${!selectedCategory ? "bg-purple-600 text-white" : "bg-purple-100 text-purple-700"}`}>1 &middot; {labels.category}</span><span className="text-slate-300">&gt;</span>
+                <span className={`rounded-full px-3 py-1.5 ${selectedCategory && !selectedLevel ? "bg-purple-600 text-white" : selectedLevel ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-400"}`}>2 &middot; {labels.level}</span><span className="text-slate-300">&gt;</span>
+                <span className={`rounded-full px-3 py-1.5 ${selectedLevel ? "bg-purple-600 text-white" : "bg-slate-100 text-slate-400"}`}>3 &middot; {labels.subject}</span>
+              </div>
+            </div>
+            <div className="p-5 sm:p-7">
+              {!selectedCategory ? <>
+                <div className="mb-4"><h3 className="text-lg font-black text-slate-900">Choose {labels.category.toLowerCase()}</h3><p className="mt-1 text-sm text-slate-500">Start with one of your institution's learning groups.</p></div>
+                <div className="grid gap-3 sm:grid-cols-2">{categoryNames.map((category, index) => { const count = data.levels.filter(level => (level.category || "Learning group") === category).length; return <button key={category} type="button" onClick={() => { setSelectedCategory(category); setSelectedLevelId(""); }} className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-purple-300 hover:bg-purple-50/60 hover:shadow-md"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-purple-100 text-lg font-black text-purple-700">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 flex-1"><strong className="block text-base font-black text-slate-900">{category}</strong><small className="mt-1 block text-sm text-slate-500">{count} {structureLabel(labels.level, count)}</small></span><span className="text-xl font-bold text-purple-600 transition group-hover:translate-x-1">&rarr;</span></button>; })}</div>
+              </> : !selectedLevel ? <>
+                <button type="button" onClick={() => { setSelectedCategory(""); setSelectedLevelId(""); }} className="mb-4 text-sm font-bold text-purple-700 hover:text-purple-900">&larr; All {labels.category.toLowerCase()}</button>
+                <div className="mb-4"><p className="text-xs font-black uppercase tracking-wide text-purple-600">{selectedCategory}</p><h3 className="mt-1 text-lg font-black text-slate-900">Choose {labels.level.toLowerCase()}</h3><p className="mt-1 text-sm text-slate-500">Select the placement you want to study.</p></div>
+                <div className="grid gap-3 sm:grid-cols-2">{levelsInCategory.map(level => { const count = (data.learningAreas || []).filter(area => area.levelId === level.id).reduce((sum, area) => sum + (Number(area.questionCount) || 0), 0); return <button key={level.id} type="button" onClick={() => setSelectedLevelId(level.id)} className="group flex items-center gap-4 rounded-2xl border border-slate-200 p-4 text-left transition hover:-translate-y-0.5 hover:border-purple-300 hover:bg-purple-50/60 hover:shadow-md"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-fuchsia-50 text-xl text-purple-700">&#10022;</span><span className="min-w-0 flex-1"><strong className="block text-base font-black text-slate-900">{level.name}</strong>{level.code && <small className="mt-0.5 block text-slate-500">{level.code}</small>}<small className="mt-1 block text-sm text-slate-500">{count} published question{count === 1 ? "" : "s"}</small></span><span className="text-xl font-bold text-purple-600 transition group-hover:translate-x-1">&rarr;</span></button>; })}</div>
+              </> : <>
+                <button type="button" onClick={() => setSelectedLevelId("")} className="mb-4 text-sm font-bold text-purple-700 hover:text-purple-900">&larr; {selectedCategory} <span className="mx-1 text-slate-300">/</span> {labels.level.toLowerCase()}</button>
+                <div className="mb-4"><p className="text-xs font-black uppercase tracking-wide text-purple-600">{selectedCategory} <span className="mx-1 text-slate-300">/</span> {selectedLevel.name}</p><h3 className="mt-1 text-lg font-black text-slate-900">Choose {labels.subject.toLowerCase().replace(/s$/, "")}</h3><p className="mt-1 text-sm text-slate-500">Each play shuffles questions and includes up to {data.institution.questionsPerPlay || 10}.</p></div>
+                {practiceError && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{practiceError}</p>}<div className="grid gap-3 sm:grid-cols-2">{learningAreas.map(([subject, questionCount], index) => <article key={subject} className="group flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-purple-300 hover:shadow-md sm:flex-row sm:items-center"><div className="flex min-w-0 items-center gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-purple-100 text-lg font-black text-purple-700">{String.fromCharCode(65 + index % 26)}</span><div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-wide text-purple-600">{labels.subject.replace(/s$/, "")}</p><h4 className="mt-0.5 truncate text-base font-black text-slate-900">{subject}</h4><p className="mt-1 text-xs text-slate-500">{questionCount ? `${Math.min(questionCount, data.institution.questionsPerPlay || 10)} per play &middot; ${questionCount} available` : "No published questions yet"}</p></div></div><button type="button" disabled={!questionCount || Boolean(startingArea)} onClick={() => startPractice({ title: subject, levelName: selectedLevel.name, levelId: selectedLevel.id, questionCount })} className="shrink-0 rounded-xl bg-purple-600 px-5 py-3 text-sm font-black text-white shadow-md transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-slate-300">{startingArea === `${selectedLevel.id}:${subject}` ? "Starting..." : questionCount ? <>Start practice &rarr;</> : "Coming soon"}</button></article>)}</div>
+              </>}
+            </div>
+          </section>}
         <section id="learning-history" className="mt-6 scroll-mt-6 rounded-3xl border border-purple-100 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-purple-600">This institution</p><h2 className="mt-1 text-2xl font-black text-slate-900">Your learning history</h2><p className="mt-1 text-sm text-slate-500">Completed practice from {data.institution.name}, visible only to you.</p></div><span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-black text-purple-700">{history.pagination.total} attempts</span></div>
           {historyLoading ? <p role="status" className="mt-5 rounded-xl bg-slate-50 p-5 text-sm font-semibold text-slate-500">Loading your learning history...</p>
@@ -224,6 +252,19 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
   </div>;
 }
 
+function structureLabel(label, count) {
+  const value = String(label || "placement").trim();
+  if (count === 1) {
+    if (/ies$/i.test(value)) return value.slice(0, -3) + "y";
+    if (/sses$/i.test(value)) return value.slice(0, -2);
+    if (/ss$/i.test(value)) return value;
+    return value.replace(/s$/i, "");
+  }
+  if (/ss$/i.test(value)) return value + "es";
+  if (/s$/i.test(value)) return value;
+  if (/y$/i.test(value)) return value.slice(0, -1) + "ies";
+  return value + "s";
+}
 function makeUuid() { return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, char => { const random = Math.floor(Math.random() * 16); return (char === "x" ? random : (random & 3) | 8).toString(16); }); }
 function plainText(html) { const element = document.createElement("div"); element.innerHTML = html || ""; return element.textContent || element.innerText || ""; }
 function speakQuestion(question) { if (!window.speechSynthesis) return; const answers = (question.options || []).map((option, index) => `Option ${String.fromCharCode(65 + index)}: ${plainText(option.text)}`).join(". "); window.speechSynthesis.cancel(); const speech = new SpeechSynthesisUtterance(`${plainText(question.text)}. ${answers}`); speech.rate = 0.9; window.speechSynthesis.speak(speech); }
