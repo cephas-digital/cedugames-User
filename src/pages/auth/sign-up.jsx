@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Bt from "../../assets/bt.png";
 import { BrandLogo } from "../../components/Brand";
@@ -7,13 +7,15 @@ import Input from "../../components/input";
 import PasswordInput from "../../components/passwordInput";
 import { apiRequest } from "../../services/api";
 
-const initialForm = { name: "", username: "", email: "", phone: "", age: "", password: "", confirmPassword: "" };
+const initialForm = { name: "", username: "", email: "", phone: "", age: "", password: "", confirmPassword: "", referralCode: "" };
 
 const Signup = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(() => ({ ...initialForm, referralCode: (new URLSearchParams(window.location.search).get("ref") || new URLSearchParams(window.location.search).get("referral") || "").trim().toUpperCase() }));
+  const [referralsEnabled, setReferralsEnabled] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  useEffect(() => { apiRequest("/referrals/status").then((result) => setReferralsEnabled(Boolean(result.isEnabled))).catch(() => setReferralsEnabled(false)); }, []);
   const update = (event) => setForm({ ...form, [event.target.name]: event.target.value });
   const passwordsMismatch = form.confirmPassword.length > 0 && form.password !== form.confirmPassword;
   const valid = form.name.trim().length >= 2 && form.username.trim().length >= 3 && form.email.trim() && form.phone.trim().length >= 7 && Number(form.age) >= 1 && Number(form.age) <= 130 && form.password.length >= 8 && form.password === form.confirmPassword;
@@ -26,7 +28,7 @@ const Signup = () => {
     try {
       const data = await apiRequest("/auth/user/register", {
         method: "POST",
-        body: JSON.stringify({ name: form.name, username: form.username, email: form.email, phone: form.phone, age: Number(form.age), password: form.password }),
+        body: JSON.stringify({ name: form.name, username: form.username, email: form.email, phone: form.phone, age: Number(form.age), password: form.password, referralCode: form.referralCode.trim() }),
       });
       if (data.requiresVerification) {
         navigate("/verification", { state: { email: form.email, purpose: "register" } });
@@ -56,6 +58,7 @@ const Signup = () => {
               <Input label="Email" name="email" type="email" value={form.email} onChange={update} required placeholder="example@mail.com" />
               <Input label="Phone number" name="phone" type="tel" inputMode="numeric" value={form.phone} onChange={update} required placeholder="08012345678" />
               <Input label="Age" name="age" type="number" min="1" max="130" value={form.age} onChange={update} required placeholder="10" />
+              {referralsEnabled && <Input label="Referral code (optional)" name="referralCode" value={form.referralCode} onChange={(event) => setForm((current) => ({ ...current, referralCode: event.target.value.toUpperCase() }))} placeholder="Enter your friend's code" />}
               <PasswordInput label="Create password" name="password" value={form.password} onChange={update} minLength={8} placeholder="At least 8 characters" />
               <PasswordInput label="Confirm password" name="confirmPassword" value={form.confirmPassword} onChange={update} minLength={8} placeholder="Repeat password" />
             </div>
