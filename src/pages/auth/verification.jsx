@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthCard from "../../components/autoCard";
 import Bt from "../../assets/bt.png";
 import { BrandLogo } from "../../components/Brand";
@@ -22,7 +22,7 @@ function VerifyCard() {
     setLoading(true); setError("");
     try {
       const data = await apiRequest("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email, otp: otp.join(""), purpose }) });
-      if (purpose === "register") navigate("/login", { replace: true, state: { message: data.message } });
+      if (purpose === "register") navigate("/login", { replace: true, state: { message: data.message, returnTo: state?.returnTo } });
       else if (data.resetToken) navigate("/reset-password", { replace: true, state: { resetToken: data.resetToken } });
       else throw new Error("A password reset session could not be created. Please verify the code again.");
     } catch (requestError) { setError(requestError.message); }

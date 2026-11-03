@@ -23,7 +23,7 @@ function Login() {
     try {
       const data = await apiRequest("/auth/login", { method: "POST", body: JSON.stringify({ ...form, rememberMe }) });
       saveSession(data.token, data.user, rememberMe);
-      navigate("/profiles", { replace: true });
+      navigate(state?.returnTo || "/profiles", { replace: true });
     } catch (requestError) { setError(requestError.message); }
     finally { setLoading(false); }
   };
@@ -56,7 +56,7 @@ function Login() {
           </div>
           <button disabled={loading} className="w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white disabled:opacity-60">{loading ? "Signing in..." : "Login"}</button>
         </div>
-        <Link to="/sign-up"><p className="text-center text-sm mt-6">Don't have an account? <span className="text-purple-600 ml-1">Signup</span></p></Link>
+        <Link to="/sign-up" state={{ returnTo: state?.returnTo }}><p className="text-center text-sm mt-6">Don't have an account? <span className="text-purple-600 ml-1">Signup</span></p></Link>
       </form></AuthCard>
     </div>
   );
