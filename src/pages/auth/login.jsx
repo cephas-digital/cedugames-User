@@ -11,7 +11,9 @@ function Login() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const [form, setForm] = useState({ identifier: "", password: "" });
-  const [rememberMe, setRememberMe] = useState(false);
+  // Keep the default login persistent so returning to the app within the
+  // server-issued 24-hour session does not require another sign-in.
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,7 +23,7 @@ function Login() {
     try {
       const data = await apiRequest("/auth/login", { method: "POST", body: JSON.stringify({ ...form, rememberMe }) });
       saveSession(data.token, data.user, rememberMe);
-      navigate("/profiles", { replace: true });
+      navigate(state?.returnTo || "/profiles", { replace: true });
     } catch (requestError) { setError(requestError.message); }
     finally { setLoading(false); }
   };
@@ -48,13 +50,13 @@ function Login() {
           <div className="flex items-center justify-between gap-3 text-sm">
             <label className="flex cursor-pointer items-center gap-2 font-semibold text-gray-600">
               <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="h-4 w-4 accent-purple-600" />
-              Remember Me
+              Keep me signed in for 24 hours
             </label>
             <Link to="/forgot-password" className="font-semibold text-[#FFAF42]">Forgot Password?</Link>
           </div>
           <button disabled={loading} className="w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white disabled:opacity-60">{loading ? "Signing in..." : "Login"}</button>
         </div>
-        <Link to="/sign-up"><p className="text-center text-sm mt-6">Don't have an account? <span className="text-purple-600 ml-1">Signup</span></p></Link>
+        <Link to="/sign-up" state={{ returnTo: state?.returnTo }}><p className="text-center text-sm mt-6">Don't have an account? <span className="text-purple-600 ml-1">Signup</span></p></Link>
       </form></AuthCard>
     </div>
   );

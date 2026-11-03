@@ -133,6 +133,12 @@ export default function Profile() {
     [saving, setSaving] = useState(false),
     [uploadingImage, setUploadingImage] = useState(false),
     [confirmLogout, setConfirmLogout] = useState(false),
+    [referralData, setReferralData] = useState(null),
+    [referralNotice, setReferralNotice] = useState(""),
+    [referralError, setReferralError] = useState(""),
+    [referralBusy, setReferralBusy] = useState(false),
+    [referralPageBusy, setReferralPageBusy] = useState(false),
+    [referralPage, setReferralPage] = useState(1),
     [form, setForm] = useState({ name: "", username: "", age: "" });
   const load = async () => {
     setLoading(true);
@@ -142,6 +148,10 @@ export default function Profile() {
       setData(response);
       const u = response.user;
       setForm({ name: u.name, username: u.username, age: u.age });
+      if (!u.parent_user_id) {
+        try { setReferralData(await apiRequest("/referrals/me?page=1&limit=25")); setReferralPage(1); setReferralError(""); }
+        catch (referralRequestError) { setReferralError(referralRequestError.message); }
+      } else setReferralData(null);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -227,6 +237,27 @@ export default function Profile() {
   const logout = () => {
     clearSession();
     navigate("/login", { replace: true });
+  };
+  const referralLink = referralData?.referralCode ? `https://cedu.cephassuite.com/sign-up?ref=${encodeURIComponent(referralData.referralCode)}` : "";
+  const playStoreLink = "https://play.google.com/store/apps/details?id=com.cedugames&pcampaignid=web_share";
+  const referralMessage = `Join me on Cedu Educational Games!\n\nSign up with my referral link: ${referralLink}\nMy referral code: ${referralData?.referralCode || ""}\n\nGet the Android app on Google Play: ${playStoreLink}\nIf you sign up in the app, enter my referral code above.`;
+  const copyReferral = async (value, successText) => {
+    try { await navigator.clipboard.writeText(value); setReferralNotice(successText); }
+    catch { setReferralNotice("Clipboard access is unavailable in this browser."); }
+  };
+  const shareReferral = async () => {
+    setReferralBusy(true); setReferralNotice("");
+    try {
+      if (navigator.share) await navigator.share({ title: "Join me on Cedu", text: referralMessage });
+      else await copyReferral(referralMessage, "Referral invitation with web and app links copied.");
+    } catch (shareError) { if (shareError.name !== "AbortError") setReferralError("Unable to open sharing options. Copy your referral link instead."); }
+    finally { setReferralBusy(false); }
+  };
+  const loadReferralPage = async (page) => {
+    setReferralPageBusy(true);
+    try { setReferralData(await apiRequest(`/referrals/me?page=${page}&limit=25`)); setReferralPage(page); }
+    catch (requestError) { setReferralError(requestError.message); }
+    finally { setReferralPageBusy(false); }
   };
   const changePassword = async (event) => {
     event.preventDefault();
@@ -430,6 +461,18 @@ export default function Profile() {
                   </dl>
                 </section>
               </div>
+              {!user.parent_user_id && <section className="mt-9 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-white p-4 shadow-sm sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-wider text-purple-600">Invite friends</p><h2 className="mt-1 text-xl font-black text-slate-900">Earn coins when friends play</h2><p className="mt-1 max-w-2xl text-sm text-slate-600">Your friend signs up with your code and completes their first game. The reward is added to your coin balance automatically.</p></div>{referralData?.settings?.is_enabled && <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Referral program active</span>}</div>
+                {referralError ? <div className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{referralError} <button type="button" onClick={load} className="ml-1 font-bold underline">Retry</button></div> : referralData && <>
+                  {!referralData.settings?.is_enabled && <p className="mt-4 rounded-xl bg-slate-100 p-3 text-sm font-semibold text-slate-600">The referral program is paused. Your existing referral history is still available.</p>}
+                  <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
+                    <div className="rounded-xl border border-purple-100 bg-white p-4"><label htmlFor="my-referral-code" className="text-xs font-bold uppercase tracking-wide text-slate-500">Your referral code</label><div className="mt-2 flex flex-wrap gap-2"><input id="my-referral-code" readOnly value={referralData.referralCode} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-black tracking-wider text-slate-900"/><button type="button" onClick={() => copyReferral(referralData.referralCode,"Referral code copied.")} className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white">Copy code</button></div><div className="mt-3 flex flex-wrap items-center gap-3"><button type="button" disabled={!referralData.settings?.is_enabled || referralBusy} onClick={shareReferral} className="rounded-lg border border-purple-200 px-4 py-2 text-sm font-bold text-purple-700 disabled:cursor-not-allowed disabled:opacity-50">{referralBusy?"Opening…":"Share invite"}</button><button type="button" disabled={!referralData.settings?.is_enabled} onClick={() => copyReferral(referralMessage,"Referral invitation with web and app links copied.")} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">Copy invite message</button></div><p className="mt-2 break-all text-xs text-slate-400">Web signup: {referralLink}</p><a href={playStoreLink} target="_blank" rel="noreferrer" className="mt-1 inline-block break-all text-xs font-semibold text-purple-700 underline">Download the Android app on Google Play</a>{referralNotice&&<p role="status" className="mt-2 text-xs font-semibold text-emerald-700">{referralNotice}</p>}</div>
+                    <div className="grid grid-cols-2 gap-3 md:w-64 md:grid-cols-1"><div className="rounded-xl bg-white p-4"><p className="text-xs text-slate-500">Friends invited</p><p className="mt-1 text-2xl font-black">{Number(referralData.summary?.total||0).toLocaleString()}</p></div><div className="rounded-xl bg-white p-4"><p className="text-xs text-slate-500">Coins earned</p><p className="mt-1 text-2xl font-black text-amber-600">{Number(referralData.summary?.coins_earned||0).toLocaleString()} 🪙</p></div></div>
+                  </div>
+                  <div className="mt-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="font-black text-slate-900">Referral history</h3><p className="text-xs text-slate-500">Reward per qualified referral: {Number(referralData.settings?.reward_coins||0).toLocaleString()} coins</p></div>{referralData.referrals?.length ? <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white"><table className="w-full min-w-[520px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-3">Friend</th><th className="p-3">Status</th><th className="p-3">Coins earned</th><th className="p-3">Joined</th></tr></thead><tbody>{referralData.referrals.map((entry)=><tr key={entry.id} className="border-t"><td className="p-3 font-semibold">{entry.referred_name}<span className="ml-1 text-xs font-normal text-slate-400">@{entry.referred_username}</span></td><td className="p-3"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${entry.status==="qualified"?"bg-emerald-100 text-emerald-700":"bg-amber-100 text-amber-700"}`}>{entry.status==="qualified"?"Reward paid":"Waiting for first game"}</span></td><td className="p-3 font-bold text-amber-700">{entry.status==="qualified"?`+${Number(entry.reward_coins).toLocaleString()}`:"—"}</td><td className="p-3 text-slate-500">{date(entry.created_at)}</td></tr>)}</tbody></table></div> : <div className="rounded-xl border border-dashed border-slate-300 bg-white py-8 text-center text-sm text-slate-500">No referrals yet. Share your code to invite a friend.</div>}
+                    {Number(referralData.pagination?.totalPages||1)>1&&<div className="mt-3 flex items-center justify-between text-sm text-slate-500"><span>Page {referralPage} of {referralData.pagination.totalPages}</span><div className="flex gap-2"><button type="button" disabled={referralPage<=1||referralPageBusy} onClick={()=>loadReferralPage(referralPage-1)} className="rounded-lg border bg-white px-3 py-2 disabled:opacity-40">Previous</button><button type="button" disabled={referralPage>=referralData.pagination.totalPages||referralPageBusy} onClick={()=>loadReferralPage(referralPage+1)} className="rounded-lg border bg-white px-3 py-2 disabled:opacity-40">{referralPageBusy?"Loading…":"Next"}</button></div></div>}</div>
+                </>}
+              </section>}
               <section className="mt-9">
                 <div className="flex items-end justify-between gap-3">
                   <div>

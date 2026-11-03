@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Bt from "../../assets/bt.png";
 import { BrandLogo } from "../../components/Brand";
 import Text from "../../components/text";
@@ -7,13 +7,17 @@ import Input from "../../components/input";
 import PasswordInput from "../../components/passwordInput";
 import { apiRequest } from "../../services/api";
 
-const initialForm = { name: "", username: "", email: "", phone: "", age: "", password: "", confirmPassword: "" };
+const initialForm = { name: "", username: "", email: "", phone: "", age: "", password: "", confirmPassword: "", referralCode: "" };
 
 const Signup = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState(initialForm);
+  const { state: navigationState } = useLocation();
+  const returnTo = navigationState?.returnTo;
+  const [form, setForm] = useState(() => ({ ...initialForm, referralCode: (new URLSearchParams(window.location.search).get("ref") || new URLSearchParams(window.location.search).get("referral") || "").trim().toUpperCase() }));
+  const [referralsEnabled, setReferralsEnabled] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  useEffect(() => { apiRequest("/referrals/status").then((result) => setReferralsEnabled(Boolean(result.isEnabled))).catch(() => setReferralsEnabled(false)); }, []);
   const update = (event) => setForm({ ...form, [event.target.name]: event.target.value });
   const passwordsMismatch = form.confirmPassword.length > 0 && form.password !== form.confirmPassword;
   const valid = form.name.trim().length >= 2 && form.username.trim().length >= 3 && form.email.trim() && form.phone.trim().length >= 7 && Number(form.age) >= 1 && Number(form.age) <= 130 && form.password.length >= 8 && form.password === form.confirmPassword;
@@ -26,21 +30,21 @@ const Signup = () => {
     try {
       const data = await apiRequest("/auth/user/register", {
         method: "POST",
-        body: JSON.stringify({ name: form.name, username: form.username, email: form.email, phone: form.phone, age: Number(form.age), password: form.password }),
+        body: JSON.stringify({ name: form.name, username: form.username, email: form.email, phone: form.phone, age: Number(form.age), password: form.password, referralCode: form.referralCode.trim() }),
       });
       if (data.requiresVerification) {
-        navigate("/verification", { state: { email: form.email, purpose: "register" } });
+        navigate("/verification", { state: { email: form.email, purpose: "register", returnTo } });
       } else {
-        navigate("/login", { replace: true, state: { message: data.message } });
+        navigate("/login", { replace: true, state: { message: data.message, returnTo } });
       }
     } catch (requestError) { setError(requestError.message); }
     finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen font-Nunito flex items-center justify-center bg-gray-100 p-4 sm:p-6" style={{ backgroundImage: `url(${Bt})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+    <div className="min-h-[100dvh] font-Nunito flex items-center justify-center bg-gray-100 p-4 sm:p-6" style={{ backgroundImage: `url(${Bt})`, backgroundSize: "cover", backgroundPosition: "center" }}>
       <div className="w-full max-w-5xl grid md:grid-cols-[minmax(0,25rem)_minmax(0,1fr)]">
-        <div className="bg-[#BF5AF2] rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none w-full p-5 sm:p-8 grid justify-center items-center">
+        <div className="signup-brand-panel bg-[#BF5AF2] rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none w-full p-5 sm:p-8 grid justify-center items-center">
           <div><Text className="text-white font-medium" size="text-[32px]">Welcome to Cedu</Text><Text className="text-white mb-4 font-light">Cephas Educational Games</Text><Text className="text-white font-light">Where learning meets play.</Text></div>
           <BrandLogo className="mx-auto my-5 w-56" />
           <Text className="text-white mb-4 font-light">Join thousands of students learning through interactive challenges and fun adventures.</Text>
@@ -56,12 +60,13 @@ const Signup = () => {
               <Input label="Email" name="email" type="email" value={form.email} onChange={update} required placeholder="example@mail.com" />
               <Input label="Phone number" name="phone" type="tel" inputMode="numeric" value={form.phone} onChange={update} required placeholder="08012345678" />
               <Input label="Age" name="age" type="number" min="1" max="130" value={form.age} onChange={update} required placeholder="10" />
+              {referralsEnabled && <Input label="Referral code (optional)" name="referralCode" value={form.referralCode} onChange={(event) => setForm((current) => ({ ...current, referralCode: event.target.value.toUpperCase() }))} placeholder="Enter your friend's code" />}
               <PasswordInput label="Create password" name="password" value={form.password} onChange={update} minLength={8} placeholder="At least 8 characters" />
               <PasswordInput label="Confirm password" name="confirmPassword" value={form.confirmPassword} onChange={update} minLength={8} placeholder="Repeat password" />
             </div>
             {passwordsMismatch && <p className="-mt-3 mb-5 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-600" role="alert">Passwords do not match. Enter the same password in both fields.</p>}
             <button type="submit" disabled={loading || !valid} className="w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white transition hover:bg-[#a947dc] active:scale-[.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-100">{loading ? "Creating account..." : "Create account"}</button>
-            <Link to="/login"><p className="text-center font-semibold text-sm mt-4">Already have an account? <span className="text-purple-600">Login</span></p></Link>
+            <Link to="/login" state={{ returnTo }}><p className="text-center font-semibold text-sm mt-4">Already have an account? <span className="text-purple-600">Login</span></p></Link>
             <p className="mt-2 text-center text-sm text-slate-500">
               <Link className="font-semibold text-purple-700 underline decoration-purple-300 underline-offset-4 hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-400" to="/privacy-policy">Privacy Policy</Link>
             </p>

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/homeNavbar";
+import BackButton from "../../components/BackButton";
 import { apiRequest } from "../../services/api";
 
 export default function DailyReward() {
-  const navigate = useNavigate();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
@@ -23,7 +22,7 @@ export default function DailyReward() {
   };
   return <div className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-amber-50"><Navbar/>
     <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <button onClick={() => navigate(-1)} className="mb-5 rounded-xl border bg-white px-4 py-2 text-sm font-bold text-slate-600">← Back</button>
+      <BackButton fallback="/profiles" className="mb-5 rounded-xl border bg-white px-4 py-2 text-sm font-bold text-slate-600" />
       {loading ? <div className="rounded-3xl bg-white py-24 text-center text-slate-400 shadow-sm">Loading your reward calendar…</div> :
       error && !status ? <div className="rounded-3xl bg-red-50 p-8 text-center font-bold text-red-700">{error}</div> :
       <section className="overflow-hidden rounded-[2rem] bg-white shadow-xl ring-1 ring-violet-100">

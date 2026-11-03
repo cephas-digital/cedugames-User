@@ -1,9 +1,12 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { isSignedIn } from "./services/api";
 import { BrandLoader } from "./components/Brand";
 
-const ProtectedRoute = ({ children }) => isSignedIn() ? children : <Navigate to="/login" replace />;
+const ProtectedRoute = ({ children }) => {
+  const location = useLocation();
+  return isSignedIn() ? children : <Navigate to="/login" replace state={{ returnTo: location }} />;
+};
 
 const Background = lazy(() => import("./pages/background"));
 const Login = lazy(() => import("./pages/auth/login"));
@@ -14,6 +17,8 @@ const AgeSelection = lazy(() => import("./pages/selection/ageSelection"));
 const ProgramSelection = lazy(() => import("./pages/selection/programSelection"));
 const PlayerProfiles = lazy(() => import("./pages/selection/playerProfiles"));
 const LearnExplorer = lazy(() => import("./pages/selection/learnExplorer"));
+const InstitutionLearning = lazy(() => import("./pages/selection/institutionLearning"));
+const JoinInstitution = lazy(() => import("./pages/selection/joinInstitution"));
 const LevelSelection = lazy(() => import("./pages/selection/levelSelection"));
 const LeaderBoard = lazy(() => import("./pages/games/leaderboard"));
 const Shop = lazy(() => import("./pages/games/shop"));
@@ -65,6 +70,8 @@ function App() {
           <Route path="/profiles" element={<ProtectedRoute><PlayerProfiles /></ProtectedRoute>} />
           <Route path="/age-selection/games" element={<ProtectedRoute><AgeSelection /></ProtectedRoute>} />
           <Route path="/learn" element={<ProtectedRoute><LearnExplorer /></ProtectedRoute>} />
+          <Route path="/institutions/:institutionId/learning" element={<ProtectedRoute><InstitutionLearning /></ProtectedRoute>} />
+          <Route path="/institutions" element={<ProtectedRoute><JoinInstitution /></ProtectedRoute>} />
 
           <Route
             path="/age-selection/little-explore"
