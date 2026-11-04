@@ -18,6 +18,7 @@ const ProgramSelection = lazy(() => import("./pages/selection/programSelection")
 const PlayerProfiles = lazy(() => import("./pages/selection/playerProfiles"));
 const LearnExplorer = lazy(() => import("./pages/selection/learnExplorer"));
 const InstitutionLearning = lazy(() => import("./pages/selection/institutionLearning"));
+const InstitutionLearningHistory = lazy(() => import("./pages/selection/institutionLearningHistory"));
 const JoinInstitution = lazy(() => import("./pages/selection/joinInstitution"));
 const LevelSelection = lazy(() => import("./pages/selection/levelSelection"));
 const LeaderBoard = lazy(() => import("./pages/games/leaderboard"));
@@ -71,6 +72,7 @@ function App() {
           <Route path="/age-selection/games" element={<ProtectedRoute><AgeSelection /></ProtectedRoute>} />
           <Route path="/learn" element={<ProtectedRoute><LearnExplorer /></ProtectedRoute>} />
           <Route path="/institutions/:institutionId/learning" element={<ProtectedRoute><InstitutionLearning /></ProtectedRoute>} />
+          <Route path="/institutions/:institutionId/learning/history" element={<ProtectedRoute><InstitutionLearningHistory /></ProtectedRoute>} />
           <Route path="/institutions" element={<ProtectedRoute><JoinInstitution /></ProtectedRoute>} />
 
           <Route
