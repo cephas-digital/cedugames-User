@@ -19,11 +19,20 @@ export default function InstitutionLearningHistory() {
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
-    const controller = new AbortController();
-    apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}`, { signal: controller.signal })
-      .then((data) => setInstitution(data.institution))
-      .catch((requestError) => { if (requestError.name !== "AbortError") setInstitutionError(requestError.message || "Institution details could not be loaded."); });
-    return () => controller.abort();
+    let active = true;
+    let controller;
+    const loadInstitution = () => {
+      controller?.abort();
+      controller = new AbortController();
+      apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}`, { signal: controller.signal })
+        .then((data) => { if (active) { setInstitution(data.institution); setInstitutionError(""); } })
+        .catch((requestError) => { if (active && requestError.name !== "AbortError") setInstitutionError(requestError.message || "Institution details could not be loaded."); });
+    };
+    const refreshOnFocus = () => { if (document.visibilityState === "visible") loadInstitution(); };
+    loadInstitution();
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
+    return () => { active = false; controller?.abort(); window.removeEventListener("focus", refreshOnFocus); document.removeEventListener("visibilitychange", refreshOnFocus); };
   }, [institutionId]);
 
   const historyRequestKey = `${institutionId}:${page}:${retry}`;

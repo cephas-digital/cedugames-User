@@ -40,12 +40,20 @@ export default function InstitutionLearning() {
     return () => { active = false; window.removeEventListener("cedugames:wallet-updated", onWalletUpdate); window.removeEventListener("focus", onWalletUpdate); };
   }, [institutionId]);
   useEffect(() => {
-    const controller = new AbortController();
     let active = true;
-    apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}`, { signal: controller.signal })
-      .then(data => { if (active) setResource({ institutionId, data, error: "" }); })
-      .catch(requestError => { if (active && requestError.name !== "AbortError") setResource({ institutionId, data: null, error: requestError.message }); });
-    return () => { active = false; controller.abort(); };
+    let controller;
+    const loadInstitution = () => {
+      controller?.abort();
+      controller = new AbortController();
+      apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}`, { signal: controller.signal })
+        .then(data => { if (active) setResource({ institutionId, data, error: "" }); })
+        .catch(requestError => { if (active && requestError.name !== "AbortError") setResource({ institutionId, data: null, error: requestError.message }); });
+    };
+    const refreshOnFocus = () => { if (document.visibilityState === "visible") loadInstitution(); };
+    loadInstitution();
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
+    return () => { active = false; controller?.abort(); window.removeEventListener("focus", refreshOnFocus); document.removeEventListener("visibilitychange", refreshOnFocus); };
   }, [institutionId]);
   const historyRequestKey = `${institutionId}:${historyRefresh}`;
   useEffect(() => {
@@ -105,11 +113,15 @@ export default function InstitutionLearning() {
       : data && <>
         <header className="relative isolate mt-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-700 via-purple-600 to-fuchsia-500 px-6 py-8 text-white shadow-[0_24px_60px_-30px_rgba(83,45,145,.55)] sm:px-10 sm:py-10 lg:mt-6 lg:flex lg:min-h-64 lg:items-center lg:justify-between lg:px-14 lg:py-12">
           <div className="pointer-events-none absolute -right-20 -top-28 -z-10 h-80 w-80 rounded-full border border-white/10 bg-white/5 shadow-[0_0_0_35px_rgba(255,255,255,.035),0_0_0_70px_rgba(255,255,255,.025)]" />
-          <div className="relative max-w-3xl">
+          <div className="relative flex max-w-3xl items-start gap-4 sm:gap-5">
+          {data.institution.logoUrl && <img src={assetUrl(data.institution.logoUrl)} alt={`${data.institution.name} logo`} className="h-14 w-14 shrink-0 rounded-2xl border border-white/25 bg-white/95 object-contain p-1.5 sm:h-20 sm:w-20 sm:p-2" />}
+          <div className="min-w-0">
           <p className="hidden text-xs font-black uppercase tracking-widest sm:block">CEDU-LEARN | YOUR INSTITUTION</p>
           <h1 className="mt-3 break-words text-3xl font-black leading-tight tracking-tight sm:text-5xl lg:text-[3.5rem]">{data.institution.name}</h1>
           <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-white/90 sm:text-base">Choose a learning area when you are ready. Your timer starts after you press Start practice.</p>
-          {(data.institution.city || data.institution.state) && <p className="mt-3 break-words text-sm text-white/75">{[data.institution.city, data.institution.state].filter(Boolean).join(", ")}</p>}
+          {data.institution.institutionType && <p className="mt-3 text-sm font-bold text-white/90">{data.institution.institutionType}</p>}
+          {[data.institution.city, data.institution.state, data.institution.country].filter(Boolean).length > 0 && <p className="mt-2 break-words text-sm text-white/75">{[data.institution.city, data.institution.state, data.institution.country].filter(Boolean).join(", ")}</p>}
+          </div>
           </div>
           <div className="mt-7 hidden shrink-0 items-center gap-4 rounded-2xl border border-white/20 bg-white/10 p-4 pr-6 shadow-lg backdrop-blur-sm lg:flex"><span className="grid h-14 w-14 place-items-center rounded-xl bg-white/15 text-3xl">&#10022;</span><div><p className="text-[10px] font-black uppercase tracking-[.16em] text-white/65">Your workspace</p><strong className="mt-1 block text-sm">Learning at your pace</strong><span className="mt-1 block text-xs text-white/70">{data.levels.length} learning {data.levels.length === 1 ? "placement" : "placements"}</span></div></div>
         </header>

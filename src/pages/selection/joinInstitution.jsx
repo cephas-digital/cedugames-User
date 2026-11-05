@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Navbar from "../../components/navbar";
 import BackButton from "../../components/BackButton";
 import PageLoader from "../../components/PageLoader";
-import { apiRequest } from "../../services/api";
+import { apiRequest, assetUrl } from "../../services/api";
 
 const locationLabel = (institution) => [institution.city, institution.state, institution.country].filter(Boolean).join(", ") || "Location not provided";
 
@@ -21,7 +21,13 @@ export default function JoinInstitution() {
   const [memberships, setMemberships] = useState([]);
 
   useEffect(() => {
-    apiRequest("/institutions/public").then((data) => setInstitutions(data.institutions || [])).catch((requestError) => setError(requestError.message)).finally(() => setLoading(false));
+    let active = true;
+    const loadPublicInstitutions = () => apiRequest("/institutions/public").then((data) => { if (active) setInstitutions(data.institutions || []); }).catch((requestError) => { if (active) setError(requestError.message); }).finally(() => { if (active) setLoading(false); });
+    const refreshOnFocus = () => { if (document.visibilityState === "visible") loadPublicInstitutions(); };
+    loadPublicInstitutions();
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
+    return () => { active = false; window.removeEventListener("focus", refreshOnFocus); document.removeEventListener("visibilitychange", refreshOnFocus); };
   }, []);
 
   useEffect(() => {
@@ -33,9 +39,15 @@ export default function JoinInstitution() {
   }, []);
 
   useEffect(() => {
-    apiRequest("/institutions/my-memberships").then((data) => {
-      setMemberships(data.memberships || []);
+    let active = true;
+    const loadMemberships = () => apiRequest("/institutions/my-memberships").then((data) => {
+      if (active) setMemberships(data.memberships || []);
     }).catch(() => undefined);
+    const refreshOnFocus = () => { if (document.visibilityState === "visible") loadMemberships(); };
+    loadMemberships();
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
+    return () => { active = false; window.removeEventListener("focus", refreshOnFocus); document.removeEventListener("visibilitychange", refreshOnFocus); };
   }, []);
 
   const requestToJoin = async (institution, inviteCode = "") => {
@@ -44,7 +56,7 @@ export default function JoinInstitution() {
       const data = await apiRequest(`/institutions/${institution.id}/join-requests`, { method: "POST", body: JSON.stringify(inviteCode ? { inviteCode } : {}) });
       setMessages((current) => ({ ...current, [institution.id]: data.message || "Join request sent." }));
       setMemberships((current) => {
-        const nextMembership = { id: data.membership?.id, institution_id: institution.id, institution_name: institution.name, institution_type: institution.institutionType, city: institution.city, state: institution.state, country: institution.country, status: data.membership?.status || "pending", requested_at: data.membership?.requested_at || new Date().toISOString(), rejected_at: data.membership?.rejected_at, rejection_count: data.membership?.rejection_count || 0 };
+        const nextMembership = { id: data.membership?.id, institution_id: institution.id, institution_name: institution.name, institution_type: institution.institutionType, institution_logo_url: institution.logoUrl, city: institution.city, state: institution.state, country: institution.country, status: data.membership?.status || "pending", requested_at: data.membership?.requested_at || new Date().toISOString(), rejected_at: data.membership?.rejected_at, rejection_count: data.membership?.rejection_count || 0 };
         return current.some((membership) => membership.institution_id === institution.id)
           ? current.map((membership) => membership.institution_id === institution.id ? { ...membership, ...nextMembership } : membership)
           : [...current, nextMembership];
@@ -89,12 +101,12 @@ export default function JoinInstitution() {
 function MembershipCard({ membership, onCancel, canceling }) {
   const status = membership.status || "pending";
   const tone = status === "active" ? "bg-emerald-100 text-emerald-700" : status === "rejected" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700";
-  return <article className="rounded-2xl border border-slate-100 bg-slate-50 p-4"><div className="flex items-start gap-3"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-purple-100 text-lg font-black text-purple-700">{membership.institution_name?.slice(0, 1).toUpperCase()}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><h3 className="truncate text-base font-black text-slate-900">{membership.institution_name}</h3><span className={"rounded-full px-2.5 py-1 text-[10px] font-black capitalize " + tone}>{status}</span></div><p className="mt-1 text-sm font-semibold text-purple-700">{membership.institution_type || "Learning institution"}</p><p className="mt-1 text-xs text-slate-500">{locationLabel(membership)}</p><p className="mt-3 text-[11px] text-slate-400">{status === "active" ? "Joined" : "Requested"} {new Date(membership.approved_at || membership.requested_at).toLocaleDateString()}</p>{membership.rejection_count > 0 && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">Previously rejected{membership.rejected_at ? ` on ${new Date(membership.rejected_at).toLocaleDateString()}` : ""}. {status === "pending" ? "Your new request is awaiting review." : "You can ask to join again from the institution list."}</p>}{status === "pending" && <button type="button" disabled={canceling} onClick={() => onCancel(membership)} className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 hover:border-red-200 hover:text-red-600 disabled:opacity-60">{canceling ? "Canceling..." : "Cancel request"}</button>}</div></div></article>;
+  return <article className="rounded-2xl border border-slate-100 bg-slate-50 p-4"><div className="flex items-start gap-3"><span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-purple-100 text-lg font-black text-purple-700">{membership.institution_logo_url ? <img src={assetUrl(membership.institution_logo_url)} alt="" className="h-full w-full object-contain" /> : membership.institution_name?.slice(0, 1).toUpperCase()}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><h3 className="truncate text-base font-black text-slate-900">{membership.institution_name}</h3><span className={"rounded-full px-2.5 py-1 text-[10px] font-black capitalize " + tone}>{status}</span></div><p className="mt-1 text-sm font-semibold text-purple-700">{membership.institution_type || "Learning institution"}</p><p className="mt-1 text-xs text-slate-500">{locationLabel(membership)}</p><p className="mt-3 text-[11px] text-slate-400">{status === "active" ? "Joined" : "Requested"} {new Date(membership.approved_at || membership.requested_at).toLocaleDateString()}</p>{membership.rejection_count > 0 && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">Previously rejected{membership.rejected_at ? ` on ${new Date(membership.rejected_at).toLocaleDateString()}` : ""}. {status === "pending" ? "Your new request is awaiting review." : "You can ask to join again from the institution list."}</p>}{status === "pending" && <button type="button" disabled={canceling} onClick={() => onCancel(membership)} className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 hover:border-red-200 hover:text-red-600 disabled:opacity-60">{canceling ? "Canceling..." : "Cancel request"}</button>}</div></div></article>;
 }
 
 function InstitutionCard({ institution, membership, message, joining, onJoin }) {
   const status = membership?.status;
   const rejectedBefore = Number(membership?.rejection_count || 0) > 0;
   const success = message && !message.toLowerCase().includes("could not") && !message.toLowerCase().includes("already") && !message.toLowerCase().includes("rejected");
-  return <article className="rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-5"><div className="flex items-start gap-4"><span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-purple-100 text-xl font-black text-purple-700">{institution.name?.slice(0, 1).toUpperCase()}</span><div className="min-w-0 flex-1"><h3 className="truncate text-lg font-black text-slate-900">{institution.name}</h3><p className="mt-1 text-sm font-semibold text-purple-700">{institution.institutionType || "Learning institution"}</p><p className="mt-1 text-xs text-slate-500">{locationLabel(institution)}</p></div></div>{rejectedBefore && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">Your previous request was rejected{membership.rejected_at ? ` on ${new Date(membership.rejected_at).toLocaleDateString()}` : ""}. You may ask to join again.</p>}{(status === "pending" || status === "active") && <p className="mt-4 rounded-xl bg-slate-100 p-3 text-sm font-semibold text-slate-700" role="status">{status === "active" ? "This profile is already a member." : "Your request is awaiting institution review."}</p>}{message && <p className={`mt-3 rounded-xl p-3 text-sm font-semibold ${success ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`} role="status">{message}</p>}{status !== "active" && status !== "pending" && <button type="button" disabled={joining} onClick={onJoin} className="mt-4 w-full rounded-xl bg-purple-600 px-4 py-3 text-sm font-black text-white transition hover:bg-purple-700 disabled:cursor-wait disabled:opacity-60">{joining ? "Sending request..." : rejectedBefore ? "Ask to join again" : "Ask to join"}</button>}</article>;
+  return <article className="rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-5"><div className="flex items-start gap-4"><span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-purple-100 text-xl font-black text-purple-700">{institution.logoUrl ? <img src={institution.logoUrl} alt="" className="h-full w-full object-contain" /> : institution.name?.slice(0, 1).toUpperCase()}</span><div className="min-w-0 flex-1"><h3 className="truncate text-lg font-black text-slate-900">{institution.name}</h3><p className="mt-1 text-sm font-semibold text-purple-700">{institution.institutionType || "Learning institution"}</p><p className="mt-1 text-xs text-slate-500">{locationLabel(institution)}</p></div></div>{rejectedBefore && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">Your previous request was rejected{membership.rejected_at ? ` on ${new Date(membership.rejected_at).toLocaleDateString()}` : ""}. You may ask to join again.</p>}{(status === "pending" || status === "active") && <p className="mt-4 rounded-xl bg-slate-100 p-3 text-sm font-semibold text-slate-700" role="status">{status === "active" ? "This profile is already a member." : "Your request is awaiting institution review."}</p>}{message && <p className={`mt-3 rounded-xl p-3 text-sm font-semibold ${success ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`} role="status">{message}</p>}{status !== "active" && status !== "pending" && <button type="button" disabled={joining} onClick={onJoin} className="mt-4 w-full rounded-xl bg-purple-600 px-4 py-3 text-sm font-black text-white transition hover:bg-purple-700 disabled:cursor-wait disabled:opacity-60">{joining ? "Sending request..." : rejectedBefore ? "Ask to join again" : "Ask to join"}</button>}</article>;
 }

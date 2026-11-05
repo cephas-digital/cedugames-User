@@ -17,12 +17,16 @@ export default function ProgramSelection() {
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
 
-    apiRequest("/institutions/my-learning")
-      .then((data) => {
-        setMemberships(data.memberships || []);
-      })
+    let active = true;
+    const loadMemberships = () => apiRequest("/institutions/my-learning")
+      .then((data) => { if (active) setMemberships(data.memberships || []); })
       .catch(() => undefined)
-      .finally(() => setMembershipLoading(false));
+      .finally(() => { if (active) setMembershipLoading(false); });
+    const refreshOnFocus = () => { if (document.visibilityState === "visible") loadMemberships(); };
+    loadMemberships();
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
+    return () => { active = false; window.removeEventListener("focus", refreshOnFocus); document.removeEventListener("visibilitychange", refreshOnFocus); };
   }, []);
 
   const orderedItems = [...items].sort(
@@ -107,13 +111,13 @@ function ProgramInstitutionMembership({ membership, onCanceled }) {
   const [canceling, setCanceling] = useState(false);
   const status = membership.status || "pending";
   const statusTone = status === "active" ? "bg-emerald-100 text-emerald-700" : status === "rejected" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700";
-  const location = [membership.city, membership.state].filter(Boolean).join(", ");
+  const location = [membership.city, membership.state, membership.country].filter(Boolean).join(", ");
   const cancel = async () => { if (canceling || !window.confirm("Cancel this pending institution request?")) return; setCanceling(true); try { await apiRequest(`/institutions/my-memberships/${membership.id}`, { method: "DELETE" }); onCanceled?.(membership.id); } catch (error) { window.alert(error.message); } finally { setCanceling(false); } };
   return (
     <article className="min-w-0 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 transition-colors hover:border-purple-200 hover:bg-white sm:p-5">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-purple-100 text-base font-extrabold text-purple-700 ring-4 ring-white">
-          {membership.institution_name?.slice(0, 1).toUpperCase() || "I"}
+        <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-purple-100 text-base font-extrabold text-purple-700 ring-4 ring-white">
+          {membership.institution_logo_url ? <img src={assetUrl(membership.institution_logo_url)} alt="" className="h-full w-full object-contain" /> : membership.institution_name?.slice(0, 1).toUpperCase() || "I"}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-start justify-between gap-2">
