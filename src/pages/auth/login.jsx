@@ -11,8 +11,7 @@ function Login() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const [form, setForm] = useState({ identifier: "", password: "" });
-  // Keep the default login persistent so returning to the app within the
-  // server-issued 24-hour session does not require another sign-in.
+  // Keep the default login persistent across browser sessions.
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -50,7 +49,7 @@ function Login() {
           <div className="flex items-center justify-between gap-3 text-sm">
             <label className="flex cursor-pointer items-center gap-2 font-semibold text-gray-600">
               <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="h-4 w-4 accent-purple-600" />
-              Keep me signed in for 24 hours
+              Keep me signed in
             </label>
             <Link to="/forgot-password" className="font-semibold text-[#FFAF42]">Forgot Password?</Link>
           </div>

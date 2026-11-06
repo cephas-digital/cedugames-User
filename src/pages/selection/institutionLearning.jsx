@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Navbar from "../../components/navbar";
 import PageLoader from "../../components/PageLoader";
+import InstitutionHistoryTable from "../../components/InstitutionHistoryTable";
 import { apiRequest, assetUrl, cacheWallet } from "../../services/api";
 import {
   playClickSound,
@@ -12,13 +13,14 @@ import {
   stopBackgroundMusic,
 } from "../../services/gameSounds";
 
+const HISTORY_PREVIEW_LIMIT = 3;
+
 export default function InstitutionLearning() {
   const { institutionId } = useParams();
   const [resource, setResource] = useState({ institutionId: null, data: null, error: "" });
   const [session, setSession] = useState(null);
   const [soundOn, setSoundOn] = useState(true);
-  const [history, setHistory] = useState({ requestKey: "", plays: [], pagination: { page: 1, limit: 10, total: 0 }, error: "" });
-  const [historyPage, setHistoryPage] = useState(1);
+  const [history, setHistory] = useState({ requestKey: "", plays: [], pagination: { page: 1, limit: HISTORY_PREVIEW_LIMIT, total: 0 }, error: "" });
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedLevelId, setSelectedLevelId] = useState("");
@@ -38,21 +40,29 @@ export default function InstitutionLearning() {
     return () => { active = false; window.removeEventListener("cedugames:wallet-updated", onWalletUpdate); window.removeEventListener("focus", onWalletUpdate); };
   }, [institutionId]);
   useEffect(() => {
-    const controller = new AbortController();
     let active = true;
-    apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}`, { signal: controller.signal })
-      .then(data => { if (active) setResource({ institutionId, data, error: "" }); })
-      .catch(requestError => { if (active && requestError.name !== "AbortError") setResource({ institutionId, data: null, error: requestError.message }); });
-    return () => { active = false; controller.abort(); };
+    let controller;
+    const loadInstitution = () => {
+      controller?.abort();
+      controller = new AbortController();
+      apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}`, { signal: controller.signal })
+        .then(data => { if (active) setResource({ institutionId, data, error: "" }); })
+        .catch(requestError => { if (active && requestError.name !== "AbortError") setResource({ institutionId, data: null, error: requestError.message }); });
+    };
+    const refreshOnFocus = () => { if (document.visibilityState === "visible") loadInstitution(); };
+    loadInstitution();
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
+    return () => { active = false; controller?.abort(); window.removeEventListener("focus", refreshOnFocus); document.removeEventListener("visibilitychange", refreshOnFocus); };
   }, [institutionId]);
-  const historyRequestKey = `${institutionId}:${historyPage}:${historyRefresh}`;
+  const historyRequestKey = `${institutionId}:${historyRefresh}`;
   useEffect(() => {
     const controller = new AbortController();
-    apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/history?page=${historyPage}&limit=10`, { signal: controller.signal })
-      .then(response => setHistory({ requestKey: historyRequestKey, plays: response.plays || [], pagination: response.pagination || { page: historyPage, limit: 10, total: 0 }, error: "" }))
-      .catch(requestError => { if (requestError.name !== "AbortError") setHistory({ requestKey: historyRequestKey, plays: [], pagination: { page: historyPage, limit: 10, total: 0 }, error: requestError.message || "Your learning history could not be loaded." }); });
+    apiRequest(`/institutions/my-learning/${encodeURIComponent(institutionId)}/history?page=1&limit=${HISTORY_PREVIEW_LIMIT}`, { signal: controller.signal })
+      .then(response => setHistory({ requestKey: historyRequestKey, plays: response.plays || [], pagination: response.pagination || { page: 1, limit: HISTORY_PREVIEW_LIMIT, total: 0 }, error: "" }))
+      .catch(requestError => { if (requestError.name !== "AbortError") setHistory({ requestKey: historyRequestKey, plays: [], pagination: { page: 1, limit: HISTORY_PREVIEW_LIMIT, total: 0 }, error: requestError.message || "Your learning history could not be loaded." }); });
     return () => controller.abort();
-  }, [institutionId, historyPage, historyRefresh, historyRequestKey]);
+  }, [institutionId, historyRefresh, historyRequestKey]);
   const historyLoading = history.requestKey !== historyRequestKey;
   const historyError = historyLoading ? "" : history.error;
   const view = resource.institutionId === institutionId ? resource : { data: null, error: "", loading: true };
@@ -103,17 +113,21 @@ export default function InstitutionLearning() {
       : data && <>
         <header className="relative isolate mt-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-700 via-purple-600 to-fuchsia-500 px-6 py-8 text-white shadow-[0_24px_60px_-30px_rgba(83,45,145,.55)] sm:px-10 sm:py-10 lg:mt-6 lg:flex lg:min-h-64 lg:items-center lg:justify-between lg:px-14 lg:py-12">
           <div className="pointer-events-none absolute -right-20 -top-28 -z-10 h-80 w-80 rounded-full border border-white/10 bg-white/5 shadow-[0_0_0_35px_rgba(255,255,255,.035),0_0_0_70px_rgba(255,255,255,.025)]" />
-          <div className="relative max-w-3xl">
+          <div className="relative flex max-w-3xl items-start gap-4 sm:gap-5">
+          {data.institution.logoUrl && <img src={assetUrl(data.institution.logoUrl)} alt={`${data.institution.name} logo`} className="h-14 w-14 shrink-0 rounded-2xl border border-white/25 bg-white/95 object-contain p-1.5 sm:h-20 sm:w-20 sm:p-2" />}
+          <div className="min-w-0">
           <p className="hidden text-xs font-black uppercase tracking-widest sm:block">CEDU-LEARN | YOUR INSTITUTION</p>
           <h1 className="mt-3 break-words text-3xl font-black leading-tight tracking-tight sm:text-5xl lg:text-[3.5rem]">{data.institution.name}</h1>
           <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-white/90 sm:text-base">Choose a learning area when you are ready. Your timer starts after you press Start practice.</p>
-          {(data.institution.city || data.institution.state) && <p className="mt-3 break-words text-sm text-white/75">{[data.institution.city, data.institution.state].filter(Boolean).join(", ")}</p>}
+          {data.institution.institutionType && <p className="mt-3 text-sm font-bold text-white/90">{data.institution.institutionType}</p>}
+          {[data.institution.city, data.institution.state, data.institution.country].filter(Boolean).length > 0 && <p className="mt-2 break-words text-sm text-white/75">{[data.institution.city, data.institution.state, data.institution.country].filter(Boolean).join(", ")}</p>}
+          </div>
           </div>
           <div className="mt-7 hidden shrink-0 items-center gap-4 rounded-2xl border border-white/20 bg-white/10 p-4 pr-6 shadow-lg backdrop-blur-sm lg:flex"><span className="grid h-14 w-14 place-items-center rounded-xl bg-white/15 text-3xl">&#10022;</span><div><p className="text-[10px] font-black uppercase tracking-[.16em] text-white/65">Your workspace</p><strong className="mt-1 block text-sm">Learning at your pace</strong><span className="mt-1 block text-xs text-white/70">{data.levels.length} learning {data.levels.length === 1 ? "placement" : "placements"}</span></div></div>
         </header>
         {!data.levels.length ? <section className="mt-8 rounded-[2rem] border border-purple-100 bg-white p-8 text-center shadow-sm"><h2 className="text-xl font-black text-slate-900">Your learning plan is being prepared</h2><p className="mt-2 text-slate-500">Your institution has not published any learning groups yet.</p></section>
           : <section className="mt-7 overflow-hidden rounded-[2rem] border border-purple-100/80 bg-white shadow-[0_18px_55px_-38px_rgba(51,38,84,.38)] lg:mt-8">
-            <div className="border-b border-slate-100 bg-gradient-to-r from-white via-white to-purple-50/80 p-5 sm:p-8 lg:px-10 lg:py-9">
+            <div className="hidden border-b border-slate-100 bg-gradient-to-r from-white via-white to-purple-50/80 p-5 sm:hidden md:block md:p-8 lg:px-10 lg:py-9">
               <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
                 <div><p className="hidden text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 sm:block sm:text-xs">Your learning path</p><h2 className="text-xl font-black leading-tight tracking-tight text-slate-900 sm:mt-1 sm:text-2xl">Choose where to begin</h2><p className="mt-1 max-w-prose text-sm leading-6 text-slate-600">Pick {labels.category.toLowerCase()}, then {labels.level.toLowerCase()}, then {labels.subject.toLowerCase()}.</p></div>
                 <span className="inline-flex max-w-full rounded-full bg-purple-100 px-3 py-1.5 text-xs font-black leading-5 text-purple-700">Up to {data.institution.questionsPerPlay || 10} questions per play · shuffled</span>
@@ -138,22 +152,25 @@ export default function InstitutionLearning() {
                 {gameplayStatus && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-purple-100 bg-purple-50 px-4 py-3 text-sm"><span className="font-bold text-slate-700">Lives: <strong className="text-purple-700">{Math.max(0, Number(gameplayStatus.lives_remaining) || 0)} / {Number(gameplayStatus.max_lives) || 0}</strong></span><span className="font-semibold text-slate-500">A score below {Number(gameplayStatus.passing_score_percent) || 0}% uses one life.</span></div>}
                 {blockedByLives && <p role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">You have no lives and need {Number(gameplayStatus.refill_coin_cost).toLocaleString()} coins to refill. Playing is paused until lives are restored.</p>}
                 {noLives && canAffordRefill && <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">You have no lives. Starting practice will automatically use {Number(gameplayStatus.refill_coin_cost).toLocaleString()} coins to refill, following the game rules.</p>}
-                {practiceError && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{practiceError}</p>}<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{learningAreas.map(([subject, questionCount], index) => <article key={subject} className="flex min-w-0 flex-col justify-between gap-5 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_16px_-14px_rgba(25,32,52,.35)] transition duration-200 hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-[0_18px_35px_-24px_rgba(91,55,139,.35)]"><div className="flex min-w-0 items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-100 sm:h-11 sm:w-11 text-lg font-black text-purple-700">{String.fromCharCode(65 + index % 26)}</span><div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-wide text-purple-600">{labels.subject.replace(/s$/, "")}</p><h4 className="mt-0.5 truncate text-base font-black text-slate-900">{subject}</h4><p className="mt-1 text-xs text-slate-500">{questionCount ? `${Math.min(questionCount, data.institution.questionsPerPlay || 10)} per play · ${questionCount} available` : "No published questions yet"}</p></div></div><button type="button" disabled={!questionCount || Boolean(startingArea) || blockedByLives} onClick={() => startPractice({ title: subject, levelName: selectedLevel.name, levelId: selectedLevel.id, questionCount })} className="min-h-11 w-full shrink-0 rounded-xl bg-purple-600 px-5 py-3 text-sm font-black sm:w-auto text-white shadow-md transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-slate-300">{startingArea === `${selectedLevel.id}:${subject}` ? "Starting..." : blockedByLives ? "No lives available" : noLives && canAffordRefill ? `Refill (${Number(gameplayStatus.refill_coin_cost).toLocaleString()} coins) & start` : questionCount ? <>Start practice &rarr;</> : "Coming soon"}</button></article>)}</div>
+                {practiceError && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{practiceError}</p>}<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">{learningAreas.map(([subject, questionCount], index) => <article key={subject} className="flex min-w-0 flex-col justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_4px_16px_-14px_rgba(25,32,52,.35)] transition duration-200 hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-[0_18px_35px_-24px_rgba(91,55,139,.35)] sm:flex-row sm:items-center sm:gap-5 sm:p-5"><div className="flex min-w-0 items-start gap-3 sm:items-center"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-100 text-base font-black text-purple-700 sm:h-11 sm:w-11 sm:text-lg">{String.fromCharCode(65 + index % 26)}</span><div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-wide text-purple-600 sm:text-[10px]">{labels.subject.replace(/s$/, "")}</p><h4 className="mt-0.5 break-words text-sm font-black leading-5 text-slate-900 sm:text-base">{subject}</h4><p className="mt-1 text-xs leading-5 text-slate-500">{questionCount ? `${Math.min(questionCount, data.institution.questionsPerPlay || 10)} per play · ${questionCount} available` : "No published questions yet"}</p></div></div><button type="button" disabled={!questionCount || Boolean(startingArea) || blockedByLives} onClick={() => startPractice({ title: subject, levelName: selectedLevel.name, levelId: selectedLevel.id, questionCount })} className="min-h-11 w-full shrink-0 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto sm:px-5 sm:py-3">{startingArea === `${selectedLevel.id}:${subject}` ? "Starting..." : blockedByLives ? "No lives available" : noLives && canAffordRefill ? `Refill (${Number(gameplayStatus.refill_coin_cost).toLocaleString()} coins) & start` : questionCount ? <>Start practice &rarr;</> : "Coming soon"}</button></article>)}</div>
               </>}
             </div>
           </section>}
         <section id="learning-history" className="mt-8 scroll-mt-6 rounded-[2rem] border border-purple-100/80 bg-white p-5 shadow-[0_18px_55px_-38px_rgba(51,38,84,.32)] sm:p-8 lg:mt-10 lg:px-10 lg:py-9">
-          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="hidden text-xs font-black uppercase tracking-wider text-purple-600 sm:block">This institution</p><h2 className="text-2xl font-black text-slate-900 sm:mt-1">Your learning history</h2><p className="mt-1 text-sm text-slate-500">Completed practice plays from {data.institution.name}, for this player profile. History is kept for 30 days.</p></div><span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-black text-purple-700">{history.pagination.total} {history.pagination.total === 1 ? "play" : "plays"}</span></div>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div><p className="hidden text-xs font-black uppercase tracking-wider text-purple-600 sm:block">This institution</p><h2 className="text-2xl font-black text-slate-900 sm:mt-1">Your learning history</h2><p className="mt-1 text-sm leading-6 text-slate-500">Recent completed plays from {data.institution.name}. History is kept for 30 days.</p></div>
+            <span className="rounded-full bg-purple-100 px-3 py-1.5 text-xs font-bold text-purple-700">{history.pagination.total} {history.pagination.total === 1 ? "play" : "plays"}</span>
+          </div>
           {historyLoading ? <p role="status" className="mt-5 rounded-xl bg-slate-50 p-5 text-sm font-semibold text-slate-500">Loading your learning history...</p>
-            : historyError ? <div className="mt-5 rounded-xl bg-red-50 p-5 text-sm font-semibold text-red-700"><p role="alert">{historyError}</p><button type="button" onClick={() => setHistoryRefresh(value => value + 1)} className="mt-3 rounded-lg bg-white px-4 py-2 font-black text-red-700">Try again</button></div>
-            : history.plays.length ? <>
-              <div className="mt-5 space-y-3">{history.plays.map(play => <article key={play.id} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h3 className="font-black text-slate-900">{play.level || "Institution practice"} <span className="text-slate-300">/</span> {play.subject || "Learning area"}</h3><p className="mt-1 text-xs font-semibold text-slate-500">{new Date(play.completedAt).toLocaleString()} <span className="mx-1 text-slate-300">·</span> {play.questionCount} {play.questionCount === 1 ? "question" : "questions"}</p></div><span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{play.correctCount} / {play.questionCount} correct</span></div><details className="group mt-4 border-t border-slate-100 pt-3"><summary className="cursor-pointer list-none text-sm font-black text-purple-700 marker:hidden">Review answers <span className="ml-1 text-xs font-semibold text-slate-400">({play.attempts?.length || 0})</span><span className="float-right transition group-open:rotate-180">⌄</span></summary><div className="mt-2 divide-y divide-slate-100">{(play.attempts || []).map((attempt, index) => <div key={attempt.id} className="flex flex-wrap items-start justify-between gap-3 py-3"><div className="min-w-0 flex-1"><div className="rich-content text-sm font-bold leading-6 text-slate-900"><span>{index + 1}. </span><span dangerouslySetInnerHTML={{ __html: attempt.question || "Question no longer available" }} /></div>{attempt.selectedOption && <div className="rich-content mt-1 text-sm text-slate-600"><span className="font-semibold">Your answer: </span><span dangerouslySetInnerHTML={{ __html: attempt.selectedOption }} /></div>}</div><span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${attempt.correct === true ? "bg-emerald-100 text-emerald-700" : attempt.timedOut ? "bg-amber-100 text-amber-700" : attempt.correct === false ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"}`}>{attempt.correct === true ? "Correct" : attempt.timedOut ? "Timed out" : attempt.correct === false ? "Incorrect" : "Completed"}</span></div>)}</div></details></article>)}</div>
-              <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-4 text-sm text-slate-500"><span>Page {history.pagination.page} of {Math.max(1, Math.ceil(history.pagination.total / history.pagination.limit))}</span><div className="flex gap-2"><button type="button" disabled={historyPage <= 1} onClick={() => setHistoryPage(value => Math.max(1, value - 1))} className="rounded-lg border border-slate-200 px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40">Previous</button><button type="button" disabled={historyPage * history.pagination.limit >= history.pagination.total} onClick={() => setHistoryPage(value => value + 1)} className="rounded-lg border border-slate-200 px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40">Next</button></div></div>
-            </> : <div className="mt-5 rounded-2xl border-2 border-dashed border-purple-100 p-8 text-center"><p className="font-bold text-slate-700">No completed practice yet</p><p className="mt-1 text-sm text-slate-500">Your completed questions from this institution will appear here.</p></div>}
+            : historyError ? <div className="mt-5 rounded-xl bg-red-50 p-5 text-sm font-semibold text-red-700"><p role="alert">{historyError}</p><button type="button" onClick={() => setHistoryRefresh(value => value + 1)} className="mt-3 rounded-lg bg-white px-4 py-2 font-bold text-red-700">Try again</button></div>
+              : <div className="mt-5"><InstitutionHistoryTable plays={history.plays} /><div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-slate-500">Showing the 3 most recent plays</p>
+                <Link to={`/institutions/${encodeURIComponent(institutionId)}/learning/history`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600">View more history <span aria-hidden="true">&rarr;</span></Link>
+              </div></div>}
         </section>
       </>}
   </main>
-  {session && <InstitutionPractice session={session} setSession={setSession} soundOn={soundOn} onToggleSound={toggleSound} onClose={closeSession} onCompleted={() => { setHistoryPage(1); setHistoryRefresh(value => value + 1); }} institutionId={institutionId} />}
+  {session && <InstitutionPractice session={session} setSession={setSession} soundOn={soundOn} onToggleSound={toggleSound} onClose={closeSession} onCompleted={() => setHistoryRefresh(value => value + 1)} institutionId={institutionId} />}
   </div>;
 }
 
@@ -167,6 +184,7 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
   const [revealedOptionOrder, setRevealedOptionOrder] = useState(null);
   const [usedActions, setUsedActions] = useState([]);
   const currentQuestion = session.questions[session.current];
+  const currentQuestionId = currentQuestion?.id;
   const attemptKey = useRef("");
   const advanceTimer = useRef(null);
   const timeoutRequested = useRef(false);
@@ -187,7 +205,7 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
     setHiddenOptionOrders([]);
     setRevealedOptionOrder(null);
     setActionError("");
-  }, [session.current]);
+  }, [currentQuestionId]);
   const applyPlayResult = result => {
     cacheWallet({ coins_count: result.coinBalance, lives_remaining: result.livesRemaining, max_lives: result.maxLives, refill_coin_cost: result.refillCoinCost });
     window.dispatchEvent(new Event("cedugames:wallet-updated"));
@@ -242,7 +260,7 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
     patch({ phase: "feedback", selected, correct: nextCorrect, lastCorrect: correct, timedOut: false });
     advanceTimer.current = window.setTimeout(() => goNext(session.current + 1, nextCorrect), 1500);
   };
-  const useLifeline = async eventKey => {
+  const applyLifeline = async eventKey => {
     if (session.phase !== "playing" || !session.attempt || session.selected !== null || actionBusy || answerRequested.current || timeoutRequested.current) return;
     const usedKey = `${currentQuestion.id}:${eventKey}`;
     if (usedActions.includes(usedKey)) return;
@@ -360,7 +378,7 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
             {currentQuestion.shapeType && <Shape type={currentQuestion.shapeType} color={currentQuestion.shapeColor} />}
             {currentQuestion.mediaUrl && <Media url={currentQuestion.mediaUrl} type={currentQuestion.mediaType} />}
             <div className="mt-5 grid gap-3 sm:grid-cols-2">{(currentQuestion.options || []).map((option, index) => hiddenOptionOrders.includes(index) ? null : <div key={index} className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${revealedOptionOrder === index ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-100" : session.selected === index ? session.phase === "feedback" && session.lastCorrect ? "border-emerald-400 bg-emerald-50" : session.phase === "feedback" ? "border-red-300 bg-red-50" : "border-purple-400 bg-purple-50" : "border-slate-200 bg-white"}`}><button type="button" disabled={session.phase !== "playing"} onClick={() => void answer(index)} className="min-h-8 w-full text-left disabled:cursor-default"><span className="mr-2 font-black text-purple-700">{String.fromCharCode(65 + index)}.</span><span className="rich-content" dangerouslySetInnerHTML={{ __html: option.text || "" }} />{option.shapeType && <Shape type={option.shapeType} color={option.shapeColor} compact />}{revealedOptionOrder === index && <span className="ml-2 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black uppercase text-emerald-700">Correct answer</span>}</button>{option.mediaUrl && <div className="mt-3"><Media url={option.mediaUrl} type={option.mediaType} /></div>}</div>)}</div>
-            <div className="mt-4 flex flex-wrap gap-2">{[["wrong_option_removed", "Remove wrong option"], ["answer_revealed", "Reveal answer"], ["question_skipped", "Skip question"]].map(([key, label]) => actionRules[key] && <button key={key} type="button" disabled={session.phase !== "playing" || session.selected !== null || Boolean(actionBusy) || usedActions.includes(`${currentQuestion.id}:${key}`)} onClick={() => void useLifeline(key)} className="min-h-10 rounded-full border border-purple-200 bg-white px-4 py-2 text-xs font-black text-purple-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{actionBusy === key ? "Processing…" : `${label} · ${Number(actionRules[key].amount).toLocaleString()} coins`}</button>)}</div>
+            <div className="mt-4 flex flex-wrap gap-2">{[["wrong_option_removed", "Remove wrong option"], ["answer_revealed", "Reveal answer"], ["question_skipped", "Skip question"]].map(([key, label]) => actionRules[key] && <button key={key} type="button" disabled={session.phase !== "playing" || session.selected !== null || Boolean(actionBusy) || usedActions.includes(`${currentQuestion.id}:${key}`)} onClick={() => void applyLifeline(key)} className="min-h-10 rounded-full border border-purple-200 bg-white px-4 py-2 text-xs font-black text-purple-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{actionBusy === key ? "Processing…" : `${label} · ${Number(actionRules[key].amount).toLocaleString()} coins`}</button>)}</div>
             {actionError && <p role="alert" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">{actionError}</p>}
             {session.phase === "checking" && <p role="status" className="mt-4 text-center text-sm font-bold text-slate-500">Checking your answer…</p>}
             {session.phase === "feedback" && <div role="status" aria-live="assertive" className={`mt-5 rounded-2xl p-4 text-center font-black ${session.timedOut ? "bg-amber-50 text-amber-700" : session.selected !== null && session.lastCorrect ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{session.timedOut ? "Time is up. Moving to the next question…" : session.selected !== null && session.lastCorrect ? "Correct answer!" : "Not quite. Moving to the next question…"}</div>}
