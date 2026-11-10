@@ -31,6 +31,7 @@ export default function Quiz() {
     [answers, setAnswers] = useState([]),
     [selected, setSelected] = useState(null),
     [feedback, setFeedback] = useState(null),
+    [magicReward, setMagicReward] = useState(0),
     [feedbackExplanation, setFeedbackExplanation] = useState(""),
     [checking, setChecking] = useState(false),
     [loading, setLoading] = useState(Boolean(levelId)),
@@ -170,10 +171,16 @@ export default function Quiz() {
         }),
       });
       setFeedback(data.isCorrect);
+      setMagicReward(Number(data.magicRewardCoins || 0));
       setFeedbackExplanation(data.explanation || "");
+      if (data.magicRewarded) {
+        setStatus((currentStatus) => ({ ...currentStatus, coins_count: data.coinBalance }));
+        window.dispatchEvent(new Event("cedugames:wallet-updated"));
+      }
       data.isCorrect ? playCorrectSound() : playWrongSound();
       window.setTimeout(() => {
         setFeedback(null);
+        setMagicReward(0);
         setFeedbackExplanation("");
         setChecking(false);
         advance(nextAnswers);
@@ -300,6 +307,7 @@ export default function Quiz() {
     setAnswers([]);
     setResult(null);
     setFeedback(null);
+    setMagicReward(0);
     setUsedActions([]);
     resetQuestion();
     setError("");
@@ -401,7 +409,7 @@ export default function Quiz() {
               selectedOption={selected}
               revealedOptionId={revealedId}
             />
-            <div className="mx-auto mt-4 flex max-w-3xl flex-wrap gap-2">
+            {!question.isMagic && <div className="mx-auto mt-4 flex max-w-3xl flex-wrap gap-2">
               {rules.wrong_option_removed && (
                 <ActionButton
                   label="Remove wrong option"
@@ -429,7 +437,8 @@ export default function Quiz() {
                   onClick={() => useAction("question_skipped")}
                 />
               )}
-            </div>
+            </div>}
+            {question.isMagic && <p className="mx-auto mt-4 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-bold text-amber-800">✨ {question.magicRewardClaimed ? "You have already claimed this question’s reward." : "Your first answer must be correct to claim this reward."} Help options are unavailable.</p>}
             {actionError && (
               <p className="mx-auto mt-3 max-w-3xl rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">
                 {actionError}
@@ -454,7 +463,7 @@ export default function Quiz() {
         )}
       </main>
       {feedback !== null && (
-        <ResultModal isCorrect={feedback} explanation={feedbackExplanation} />
+        <ResultModal isCorrect={feedback} explanation={feedbackExplanation} magicReward={magicReward} />
       )}
     </div>
   );
