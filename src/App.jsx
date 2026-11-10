@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { isSignedIn } from "./services/api";
 import { BrandLoader } from "./components/Brand";
+import PromotionalQuestionGate from "./components/PromotionalQuestionGate";
 
 const ProtectedRoute = ({ children }) => {
   const location = useLocation();
@@ -137,6 +138,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      <PromotionalQuestionGate />
     </BrowserRouter>
   );
 }
