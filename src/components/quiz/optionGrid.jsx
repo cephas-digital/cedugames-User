@@ -1,4 +1,5 @@
 import { assetUrl } from "../../services/api";
+import PriorityAudio from "../PriorityAudio";
 
 export default function OptionsGrid({ options, onSelect, selectedOption, revealedOptionId }) {
   const useTwoColumns = options.length > 1 && options.every((option) => {
@@ -28,7 +29,7 @@ function OptionMedia({ option }) {
   if (!option.mediaUrl) return null;
   const src = assetUrl(option.mediaUrl);
   if (option.mediaType === "image") return <img src={src} alt="Answer option" className="w-28 sm:w-40 max-h-32 object-contain" />;
-  if (option.mediaType === "audio") return <audio controls preload="metadata" onClick={(event) => event.stopPropagation()} className="max-w-full"><source src={src} /></audio>;
-  if (option.mediaType === "video") return <video controls preload="metadata" onClick={(event) => event.stopPropagation()} className="max-h-36 max-w-full rounded-lg"><source src={src} /></video>;
+  if (option.mediaType === "audio") return <PriorityAudio controls preload="metadata" onClick={(event) => event.stopPropagation()} className="max-w-full"><source src={src} /></PriorityAudio>;
+  if (option.mediaType === "video") return <PriorityAudio as="video" controls preload="metadata" onClick={(event) => event.stopPropagation()} className="max-h-36 max-w-full rounded-lg"><source src={src} /></PriorityAudio>;
   return <a href={src} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} className="text-purple-700 underline">Open attachment</a>;
 }

@@ -18,12 +18,12 @@ function ForgotPassword() {
     setError("");
     setLoading(true);
     try {
-      const normalizedEmail = email.trim();
+      const normalizedEmail = email.trim().toLowerCase();
       await apiRequest("/auth/forgot-password", {
         method: "POST",
         body: JSON.stringify({ email: normalizedEmail }),
       });
-      navigate("/verification", { state: { email: normalizedEmail, purpose: "password_reset" } });
+      navigate("/verification", { state: { email: normalizedEmail, purpose: "password_reset", sentAt: Date.now() } });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -50,8 +50,7 @@ function ForgotPassword() {
           </h1>
 
           <p className="text-gray-500 text-sm">
-            Enter the email address linked to your account. We’ll send you a
-            verification code to reset your password.
+            Enter the email address linked to your account. We will send a six-digit code so you can reset your password.
           </p>
         </div>
 

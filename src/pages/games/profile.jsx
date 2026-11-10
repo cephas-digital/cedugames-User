@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ProfileHeader from "../../assets/profileIcon.png";
 import Navbar from "../../components/homeNavbar";
 import BadgeImage from "../../assets/badge.png";
 import Coin from "../../assets/coin.png";
@@ -65,7 +64,7 @@ function Spinner({ label = "Loading" }) {
 function Stat({ image, label, value, color }) {
   return (
     <article
-      className={`flex min-w-0 items-center gap-2 rounded-2xl p-3 sm:gap-3 sm:p-4 ${color}`}
+      className={`flex min-w-0 items-center gap-2 rounded-2xl border border-white/80 p-3 shadow-sm sm:gap-3 sm:p-4 ${color}`}
     >
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white sm:h-14 sm:w-14">
         <img src={image} alt="" className="h-7 w-7 object-contain sm:h-8 sm:w-8" />
@@ -140,6 +139,12 @@ export default function Profile() {
     [referralPageBusy, setReferralPageBusy] = useState(false),
     [referralPage, setReferralPage] = useState(1),
     [form, setForm] = useState({ name: "", username: "", age: "" });
+  const [historyType, setHistoryType] = useState("games");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyData, setHistoryData] = useState({ history: [], pagination: { page: 1, total: 0, totalPages: 0 } });
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState("");
+  const [profileTab, setProfileTab] = useState("overview");
   const load = async () => {
     setLoading(true);
     setError("");
@@ -161,6 +166,16 @@ export default function Profile() {
   useEffect(() => {
     load();
   }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    setHistoryLoading(true);
+    setHistoryError("");
+    apiRequest(`/auth/user/play-history?type=${historyType}&page=${historyPage}&limit=10`, { signal: controller.signal })
+      .then((response) => setHistoryData(response))
+      .catch((requestError) => { if (requestError.name !== "AbortError") setHistoryError(requestError.message || "Unable to load play history."); })
+      .finally(() => { if (!controller.signal.aborted) setHistoryLoading(false); });
+    return () => controller.abort();
+  }, [historyPage, historyType]);
   const user = data?.user,
     performance = user?.performance || {},
     earned = useMemo(
@@ -291,265 +306,38 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-slate-100">
       <Navbar />
-      <main className="mx-auto w-full max-w-7xl p-3 sm:p-6 lg:p-8">
-        <section className="overflow-hidden rounded-2xl bg-white shadow-sm sm:rounded-3xl">
-          <div className="px-3 pt-5 sm:px-8 sm:pt-8">
-            <img
-              src={ProfileHeader}
-              alt="Profile"
-              className="mx-auto w-full max-w-4xl"
-            />
-          </div>
-          {loading ? (
-            <Spinner label="Loading your profile..." />
-          ) : error && !data ? (
-            <div className="p-6 text-center">
-              <p className="rounded-xl bg-red-50 p-4 text-red-700">{error}</p>
-              <button
-                onClick={load}
-                className="mt-4 rounded-xl bg-purple-600 px-5 py-2.5 font-bold text-white"
-              >
-                Try again
-              </button>
+      <main className="mx-auto w-full max-w-[1500px] px-2 py-2 sm:px-5 sm:py-3 lg:px-7">
+        <section className="flex h-[calc(100dvh-13rem)] min-h-[28rem] flex-col overflow-hidden rounded-[1.35rem] border border-white/80 bg-white shadow-[0_12px_40px_-24px_rgba(37,24,71,0.35)] sm:h-[calc(100dvh-8.5rem)] sm:min-h-[34rem] sm:rounded-3xl">
+          {loading ? <Spinner label="Loading your profile..." /> : error && !data ? (
+            <div className="m-auto p-6 text-center"><p role="alert" className="rounded-xl bg-red-50 p-4 text-red-700">{error}</p><button onClick={load} className="mt-4 rounded-xl bg-purple-600 px-5 py-2.5 font-bold text-white">Try again</button></div>
+          ) : <>
+            {error && <div role="alert" className="mx-4 mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700 sm:mx-6">{error}</div>}
+            <header className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-white via-white to-purple-50/50 px-3 py-3 sm:px-6">
+              <div className="relative shrink-0">
+                <div className="grid h-12 w-12 overflow-hidden rounded-full bg-purple-100 text-xl font-black text-purple-700 ring-2 ring-purple-300 sm:h-14 sm:w-14">
+                  {user.profile_image_url ? <img src={assetUrl(user.profile_image_url)} alt={`${user.name}'s profile`} className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center">{user.name?.[0]?.toUpperCase() || "P"}</span>}
+                </div>
+                <button type="button" onClick={() => setEditing(true)} aria-label="Edit profile" className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-purple-600 text-white"><ActionIcon name="pencil" size={14}/></button>
+              </div>
+              <div className="min-w-0 flex-1"><h1 className="truncate text-lg font-black text-slate-900 sm:text-xl">{user.name}</h1><p className="truncate text-xs text-slate-500 sm:text-sm">@{user.username} � {user.email}</p></div>
+              <div className="flex w-full gap-2 sm:ml-auto sm:w-auto"><button onClick={() => { setPasswordError(""); setChangingPassword(true); }} className="flex min-h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-purple-200 bg-purple-50 px-2.5 text-[11px] font-bold text-purple-700 transition hover:bg-purple-100 sm:flex-none sm:px-4 sm:text-sm"><ActionIcon name="shield" size={16}/><span className="sm:hidden">Password</span><span className="hidden sm:inline">Change password</span></button><button onClick={() => setConfirmLogout(true)} className="flex min-h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-red-200 bg-red-50 px-2.5 text-[11px] font-bold text-red-600 transition hover:bg-red-100 sm:flex-none sm:px-4 sm:text-sm"><ActionIcon name="logout" size={16}/>Log out</button></div>
+            </header>
+            <div className="grid grid-cols-2 gap-2 border-b border-slate-100 bg-slate-50/50 px-3 py-3 sm:grid-cols-4 sm:gap-3 sm:px-6">
+              <Stat image={Trophy} label="Total XP" value={Number(user.total_xp).toLocaleString()} color="bg-purple-100"/><Stat image={Coin} label="Coin balance" value={Number(user.coins_count).toLocaleString()} color="bg-yellow-100"/><Stat image={BadgeImage} label="Badges earned" value={earned.length.toLocaleString()} color="bg-blue-100"/><Stat image={Trophy} label="Levels completed" value={Number(performance.completed_levels).toLocaleString()} color="bg-emerald-100"/>
             </div>
-          ) : (
-            <div className="px-4 pb-8 sm:px-8 lg:px-12">
-              {error && (
-                <div
-                  role="alert"
-                  className="mx-auto mb-5 max-w-3xl rounded-xl bg-red-50 p-4 text-sm text-red-700"
-                >
-                  {error}
-                </div>
-              )}
-              <div className="flex flex-col items-center text-center">
-                <div className="relative">
-                <div className="grid h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-purple-100 text-5xl font-black text-purple-700 shadow-[0_0_0_4px_#c084fc] sm:h-36 sm:w-36">
-                  {user.profile_image_url ? (
-                    <img
-                      src={assetUrl(user.profile_image_url)}
-                      alt={`${user.name}'s profile`}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="grid h-full w-full place-items-center">
-                      {user.name?.[0]?.toUpperCase() || "P"}
-                    </span>
-                  )}
-                </div>
-                <button type="button" onClick={() => setEditing(true)} aria-label="Edit profile" title="Edit profile" className="absolute bottom-0 right-0 grid h-10 w-10 place-items-center rounded-full border-4 border-white bg-purple-600 text-white shadow-lg transition hover:scale-105 hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-purple-200 sm:h-11 sm:w-11"><ActionIcon name="pencil" size={17}/></button>
-                </div>
-                <h1 className="mt-5 text-xl font-black text-slate-900 sm:text-2xl">
-                  {user.name}
-                </h1>
-                <p className="text-sm text-slate-500">
-                  @{user.username} · {user.email}
-                </p>
-                <div className="mt-5 grid w-full max-w-md grid-cols-1 gap-3 min-[380px]:grid-cols-2">
-                  <button
-                    onClick={() => {
-                      setPasswordError("");
-                      setChangingPassword(true);
-                    }}
-                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-5 py-3 text-sm font-bold text-purple-700 shadow-sm transition hover:border-purple-300 hover:bg-purple-100"
-                  >
-                    <ActionIcon name="shield"/>Change password
-                  </button>
-                  <button
-                    onClick={() => setConfirmLogout(true)}
-                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-bold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-100"
-                  >
-                    <ActionIcon name="logout"/>Log out
-                  </button>
-                </div>
-              </div>
-              <div className="mx-auto mt-7 grid max-w-4xl grid-cols-2 gap-3 lg:grid-cols-4">
-                <Stat
-                  image={Trophy}
-                  label="Total XP"
-                  value={Number(user.total_xp).toLocaleString()}
-                  color="bg-purple-100"
-                />
-                <Stat
-                  image={Coin}
-                  label="Coin balance"
-                  value={Number(user.coins_count).toLocaleString()}
-                  color="bg-yellow-100"
-                />
-                <Stat
-                  image={BadgeImage}
-                  label="Badges earned"
-                  value={earned.length.toLocaleString()}
-                  color="bg-blue-100"
-                />
-                <Stat
-                  image={Trophy}
-                  label="Levels completed"
-                  value={Number(performance.completed_levels).toLocaleString()}
-                  color="bg-emerald-100"
-                />
-              </div>
-              <div className="mt-9 grid gap-6 lg:grid-cols-3">
-                <section className="rounded-2xl border border-slate-200 p-4 sm:p-6 lg:col-span-2">
-                  <h2 className="text-lg font-black text-slate-900">
-                    Learning progress
-                  </h2>
-                  <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div>
-                      <p className="text-xs text-slate-400">Attempts</p>
-                      <p className="text-2xl font-black">
-                        {Number(performance.attempts)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400">Pass rate</p>
-                      <p className="text-2xl font-black">{passRate}%</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400">Average</p>
-                      <p className="text-2xl font-black">
-                        {Number(performance.average_score)}%
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400">Best score</p>
-                      <p className="text-2xl font-black">
-                        {Number(performance.best_score)}%
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-6">
-                    <Progress
-                      label="Correct answers"
-                      value={Number(performance.correct_answers)}
-                      total={Number(performance.questions_answered)}
-                    />
-                  </div>
-                  <p className="mt-5 text-xs text-slate-400">
-                    Last played: {ago(performance.last_played)}
-                  </p>
-                </section>
-                <section className="rounded-2xl border border-slate-200 p-4 sm:p-6">
-                  <h2 className="text-lg font-black">Account</h2>
-                  <dl className="mt-4 space-y-4 text-sm">
-                    <div>
-                      <dt className="text-slate-400">Age</dt>
-                      <dd className="font-bold">{user.age}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-slate-400">Lives remaining</dt>
-                      <dd className="font-bold">
-                        {Number(user.lives_remaining)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-slate-400">Member since</dt>
-                      <dd className="font-bold">{date(user.created_at)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-slate-400">Sign-in method</dt>
-                      <dd className="font-bold">
-                        {user.is_oauth ? "Google" : "Email and password"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-slate-400">Email status</dt>
-                      <dd className="font-bold text-emerald-600">
-                        {user.is_verified ? "Verified" : "Verification pending"}
-                      </dd>
-                    </div>
-                  </dl>
-                </section>
-              </div>
-              {!user.parent_user_id && <section className="mt-9 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-white p-4 shadow-sm sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-wider text-purple-600">Invite friends</p><h2 className="mt-1 text-xl font-black text-slate-900">Earn coins when friends play</h2><p className="mt-1 max-w-2xl text-sm text-slate-600">Your friend signs up with your code and completes their first game. The reward is added to your coin balance automatically.</p></div>{referralData?.settings?.is_enabled && <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Referral program active</span>}</div>
-                {referralError ? <div className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{referralError} <button type="button" onClick={load} className="ml-1 font-bold underline">Retry</button></div> : referralData && <>
-                  {!referralData.settings?.is_enabled && <p className="mt-4 rounded-xl bg-slate-100 p-3 text-sm font-semibold text-slate-600">The referral program is paused. Your existing referral history is still available.</p>}
-                  <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
-                    <div className="rounded-xl border border-purple-100 bg-white p-4"><label htmlFor="my-referral-code" className="text-xs font-bold uppercase tracking-wide text-slate-500">Your referral code</label><div className="mt-2 flex flex-wrap gap-2"><input id="my-referral-code" readOnly value={referralData.referralCode} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-black tracking-wider text-slate-900"/><button type="button" onClick={() => copyReferral(referralData.referralCode,"Referral code copied.")} className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white">Copy code</button></div><div className="mt-3 flex flex-wrap items-center gap-3"><button type="button" disabled={!referralData.settings?.is_enabled || referralBusy} onClick={shareReferral} className="rounded-lg border border-purple-200 px-4 py-2 text-sm font-bold text-purple-700 disabled:cursor-not-allowed disabled:opacity-50">{referralBusy?"Opening…":"Share invite"}</button><button type="button" disabled={!referralData.settings?.is_enabled} onClick={() => copyReferral(referralMessage,"Referral invitation with web and app links copied.")} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">Copy invite message</button></div><p className="mt-2 break-all text-xs text-slate-400">Web signup: {referralLink}</p><a href={playStoreLink} target="_blank" rel="noreferrer" className="mt-1 inline-block break-all text-xs font-semibold text-purple-700 underline">Download the Android app on Google Play</a>{referralNotice&&<p role="status" className="mt-2 text-xs font-semibold text-emerald-700">{referralNotice}</p>}</div>
-                    <div className="grid grid-cols-2 gap-3 md:w-64 md:grid-cols-1"><div className="rounded-xl bg-white p-4"><p className="text-xs text-slate-500">Friends invited</p><p className="mt-1 text-2xl font-black">{Number(referralData.summary?.total||0).toLocaleString()}</p></div><div className="rounded-xl bg-white p-4"><p className="text-xs text-slate-500">Coins earned</p><p className="mt-1 text-2xl font-black text-amber-600">{Number(referralData.summary?.coins_earned||0).toLocaleString()} 🪙</p></div></div>
-                  </div>
-                  <div className="mt-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="font-black text-slate-900">Referral history</h3><p className="text-xs text-slate-500">Reward per qualified referral: {Number(referralData.settings?.reward_coins||0).toLocaleString()} coins</p></div>{referralData.referrals?.length ? <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white"><table className="w-full min-w-[520px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-3">Friend</th><th className="p-3">Status</th><th className="p-3">Coins earned</th><th className="p-3">Joined</th></tr></thead><tbody>{referralData.referrals.map((entry)=><tr key={entry.id} className="border-t"><td className="p-3 font-semibold">{entry.referred_name}<span className="ml-1 text-xs font-normal text-slate-400">@{entry.referred_username}</span></td><td className="p-3"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${entry.status==="qualified"?"bg-emerald-100 text-emerald-700":"bg-amber-100 text-amber-700"}`}>{entry.status==="qualified"?"Reward paid":"Waiting for first game"}</span></td><td className="p-3 font-bold text-amber-700">{entry.status==="qualified"?`+${Number(entry.reward_coins).toLocaleString()}`:"—"}</td><td className="p-3 text-slate-500">{date(entry.created_at)}</td></tr>)}</tbody></table></div> : <div className="rounded-xl border border-dashed border-slate-300 bg-white py-8 text-center text-sm text-slate-500">No referrals yet. Share your code to invite a friend.</div>}
-                    {Number(referralData.pagination?.totalPages||1)>1&&<div className="mt-3 flex items-center justify-between text-sm text-slate-500"><span>Page {referralPage} of {referralData.pagination.totalPages}</span><div className="flex gap-2"><button type="button" disabled={referralPage<=1||referralPageBusy} onClick={()=>loadReferralPage(referralPage-1)} className="rounded-lg border bg-white px-3 py-2 disabled:opacity-40">Previous</button><button type="button" disabled={referralPage>=referralData.pagination.totalPages||referralPageBusy} onClick={()=>loadReferralPage(referralPage+1)} className="rounded-lg border bg-white px-3 py-2 disabled:opacity-40">{referralPageBusy?"Loading…":"Next"}</button></div></div>}</div>
-                </>}
-              </section>}
-              <section className="mt-9">
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-black">Badge collection</h2>
-                    <p className="text-sm text-slate-500">
-                      Keep learning to unlock every badge.
-                    </p>
-                  </div>
-                  <span className="text-sm font-bold text-purple-600">
-                    {earned.length}/{data.badges.length}
-                  </span>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                  {data.badges.map((badge) => (
-                    <article
-                      key={badge.id}
-                      className={`rounded-2xl border p-3 text-center sm:p-4 ${badge.earned ? "border-purple-200 bg-purple-50" : "border-slate-200 bg-slate-50 opacity-60"}`}
-                    >
-                      <img
-                        src={BadgeImage}
-                        alt=""
-                        className={`mx-auto h-12 w-12 ${badge.earned ? "" : "grayscale"}`}
-                      />
-                      <h3 className="mt-2 text-sm font-black">{badge.name}</h3>
-                      <span
-                        className={`mt-2 inline-block rounded-full px-2 py-1 text-[10px] font-bold capitalize ${tierColor[badge.tier]}`}
-                      >
-                        {badge.tier}
-                      </span>
-                      <p className="mt-2 text-xs text-slate-500">
-                        {badge.earned
-                          ? `Earned ${date(badge.earned_at)}`
-                          : `Requires ${Number(badge.criteria_value).toLocaleString()} ${criteriaLabel[badge.criteria_type]}`}
-                      </p>
-                    </article>
-                  ))}
-                </div>
-              </section>
-              <section className="mt-9">
-                <h2 className="text-lg font-black">Recent learning activity</h2>
-                {data.recentAttempts.length ? (
-                  <div className="mt-4 space-y-3">
-                    {data.recentAttempts.map((attempt) => (
-                      <article
-                        key={attempt.id}
-                        className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div>
-                          <p className="font-bold text-slate-900">
-                            {attempt.category_name} · Level{" "}
-                            {attempt.level_number}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {attempt.level_name} · {ago(attempt.created_at)}
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between gap-4 sm:justify-end">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${attempt.passed ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-600"}`}
-                          >
-                            {attempt.passed ? "Passed" : "Keep trying"}
-                          </span>
-                          <span className="text-lg font-black text-purple-700">
-                            {attempt.score_percent}%
-                          </span>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-2xl border-2 border-dashed p-10 text-center text-sm text-slate-400">
-                    Play your first level to start building your activity.
-                  </div>
-                )}
-              </section>
+            <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-slate-100 bg-white px-2 pt-1 sm:px-6" role="tablist" aria-label="Profile sections">
+              {[{id:"overview",label:"Overview"},{id:"history",label:"Play history"},...(!user.parent_user_id?[{id:"referrals",label:"Referrals"}]:[])].map(tab=><button key={tab.id} type="button" role="tab" aria-selected={profileTab===tab.id} onClick={()=>setProfileTab(tab.id)} className={`shrink-0 rounded-t-xl border-b-2 px-3 py-3 text-xs font-bold transition sm:px-4 sm:text-sm ${profileTab===tab.id?"border-purple-600 bg-purple-50/60 text-purple-700":"border-transparent text-slate-500 hover:text-slate-800"}`}>{tab.label}</button>)}
+            </nav>
+            <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/40 p-3 sm:bg-white sm:p-6" role="tabpanel">
+              {profileTab === "overview" && <div className="grid gap-4 lg:grid-cols-3">
+                <section className="rounded-2xl border border-slate-200 p-4 sm:p-5 lg:col-span-2"><h2 className="text-lg font-black text-slate-900">Learning progress</h2><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Attempts",Number(performance.attempts)],["Pass rate",`${passRate}%`],["Average",`${Number(performance.average_score)}%`],["Best score",`${Number(performance.best_score)}%`]].map(([label,value])=><div key={label}><p className="text-xs text-slate-400">{label}</p><p className="text-xl font-black sm:text-2xl">{value}</p></div>)}</div><div className="mt-5"><Progress label="Correct answers" value={Number(performance.correct_answers)} total={Number(performance.questions_answered)}/></div><p className="mt-4 text-xs text-slate-400">Last played: {ago(performance.last_played)}</p></section>
+                <section className="rounded-2xl border border-slate-200 p-4 sm:p-5"><h2 className="text-lg font-black">Account</h2><dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3 text-sm sm:grid-cols-1"><div><dt className="text-slate-400">Age</dt><dd className="font-bold">{user.age}</dd></div><div><dt className="text-slate-400">Lives remaining</dt><dd className="font-bold">{Number(user.lives_remaining)}</dd></div><div><dt className="text-slate-400">Member since</dt><dd className="font-bold">{date(user.created_at)}</dd></div><div><dt className="text-slate-400">Sign-in method</dt><dd className="font-bold">{user.is_oauth?"Google":"Email and password"}</dd></div><div><dt className="text-slate-400">Email status</dt><dd className="font-bold text-emerald-600">{user.is_verified?"Verified":"Verification pending"}</dd></div></dl></section>
+                <section className="rounded-2xl border border-slate-200 p-4 sm:p-5 lg:col-span-3"><h2 className="text-lg font-black">Badges</h2>{earned.length?<div className="mt-3 flex flex-wrap gap-3">{earned.map((badge,index)=><div key={badge.id||badge.name||index} title={badge.name||badge.badge_name} className="grid h-14 w-14 place-items-center rounded-xl bg-amber-50"><img src={assetUrl(badge.image_url||badge.icon_url)||BadgeImage} onError={(event)=>{event.currentTarget.onerror=null;event.currentTarget.src=BadgeImage;}} alt={badge.name||badge.badge_name||"Earned badge"} className="h-10 w-10 object-contain"/></div>)}</div>:<p className="mt-2 text-sm text-slate-500">Complete learning milestones to earn badges.</p>}</section>
+              </div>}
+              {profileTab === "history" && <section><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-black">Play history</h2><p className="text-xs text-slate-500">Your CeduGames and CEDU-LEARN activity.</p></div><span className="text-xs font-semibold text-slate-500">{historyData.pagination.total} {historyType==="games"?"game":"learning"} attempts</span></div><div className="mt-3 flex w-full rounded-xl bg-slate-100 p-1 sm:inline-flex sm:w-auto" role="tablist" aria-label="Play history type">{[{id:"games",label:"CeduGames"},{id:"learn",label:"CEDU-LEARN"}].map(tab=><button key={tab.id} type="button" role="tab" aria-selected={historyType===tab.id} onClick={()=>{setHistoryType(tab.id);setHistoryPage(1);}} className={`flex-1 rounded-lg px-3 py-2 text-center text-xs font-bold transition sm:flex-none sm:px-4 sm:text-sm ${historyType===tab.id?"bg-white text-purple-700 shadow-sm":"text-slate-500"}`}>{tab.label}</button>)}</div>{historyLoading?<p className="p-8 text-center text-sm text-slate-500">Loading history...</p>:historyError?<p role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{historyError}</p>:historyData.history.length?<div className="mt-3 space-y-2">{historyData.history.map(attempt=><article key={attempt.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4"><div className="min-w-0"><p className="truncate font-bold">{historyType==="games"?[attempt.age_group_name,attempt.category_name].filter(Boolean).join(" - "):attempt.program_name||"CEDU-LEARN"}</p><p className="text-sm text-slate-600">{historyType==="learn"&&attempt.learning_path?`${attempt.learning_path} - `:""}{attempt.level_name}{attempt.level_number?` - Level ${attempt.level_number}`:""}</p><p className="text-xs text-slate-400">{ago(attempt.created_at)} � {attempt.correct_answers}/{attempt.total_questions} correct</p></div><div className="flex items-center gap-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${attempt.passed?"bg-emerald-100 text-emerald-700":"bg-red-50 text-red-600"}`}>{attempt.passed?"Passed":"Keep trying"}</span><b className="text-lg text-purple-700">{attempt.score_percent}%</b></div></article>)}</div>:<p className="mt-4 rounded-xl border border-dashed p-8 text-center text-sm text-slate-500">No history yet. Complete a level to see it here.</p>}{historyData.pagination.totalPages>1&&<div className="mt-4 flex items-center justify-between"><button type="button" onClick={()=>setHistoryPage(page=>Math.max(1,page-1))} disabled={historyPage<=1||historyLoading} className="rounded-lg border px-4 py-2 text-sm font-bold disabled:opacity-40">Previous</button><span className="text-xs text-slate-500">Page {historyPage} of {historyData.pagination.totalPages}</span><button type="button" onClick={()=>setHistoryPage(page=>Math.min(historyData.pagination.totalPages,page+1))} disabled={historyPage>=historyData.pagination.totalPages||historyLoading} className="rounded-lg border px-4 py-2 text-sm font-bold disabled:opacity-40">Next</button></div>}</section>}
+              {profileTab === "referrals" && !user.parent_user_id && <section><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-purple-600">Invite friends</p><h2 className="text-xl font-black">Earn coins when friends play</h2><p className="text-sm text-slate-600">Your friend signs up with your code and completes their first game.</p></div>{referralData?.settings?.is_enabled&&<span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Program active</span>}</div>{referralError&&<p role="alert" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{referralError} <button type="button" onClick={load} className="font-bold underline">Retry</button></p>}{referralData&&<><div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]"><div className="rounded-xl border bg-slate-50 p-4"><label htmlFor="my-referral-code" className="text-xs font-bold uppercase text-slate-500">Referral code</label><div className="mt-2 flex flex-wrap gap-2"><input id="my-referral-code" readOnly value={referralData.referralCode} className="min-w-0 flex-1 rounded-lg border bg-white px-3 py-2 font-black"/><button type="button" onClick={()=>copyReferral(referralData.referralCode,"Referral code copied.")} className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white">Copy</button><button type="button" disabled={!referralData.settings?.is_enabled||referralBusy} onClick={shareReferral} className="rounded-lg border border-purple-200 bg-white px-4 py-2 text-sm font-bold text-purple-700 disabled:opacity-50">{referralBusy?"Opening...":"Share invite"}</button><button type="button" onClick={()=>copyReferral(referralMessage,"Referral invitation copied.")} className="rounded-lg border bg-white px-4 py-2 text-sm font-bold">Copy invite</button></div>{referralNotice&&<p role="status" className="mt-2 text-xs font-semibold text-emerald-700">{referralNotice}</p>}</div><div className="grid grid-cols-2 gap-3 lg:w-64 lg:grid-cols-1"><div className="rounded-xl bg-purple-50 p-4"><p className="text-xs text-slate-500">Friends invited</p><p className="text-2xl font-black">{Number(referralData.summary?.total||0).toLocaleString()}</p></div><div className="rounded-xl bg-amber-50 p-4"><p className="text-xs text-slate-500">Coins earned</p><p className="text-2xl font-black text-amber-600">{Number(referralData.summary?.coins_earned||0).toLocaleString()} coins</p></div></div></div><h3 className="mb-2 mt-5 font-black">Referral history</h3>{referralData.referrals?.length?<div className="overflow-x-auto rounded-xl border"><table className="w-full min-w-[520px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-3">Friend</th><th className="p-3">Status</th><th className="p-3">Coins</th><th className="p-3">Joined</th></tr></thead><tbody>{referralData.referrals.map(entry=><tr key={entry.id} className="border-t"><td className="p-3 font-semibold">{entry.referred_name} <span className="text-xs font-normal text-slate-400">@{entry.referred_username}</span></td><td className="p-3">{entry.status==="qualified"?"Reward paid":"Waiting for first game"}</td><td className="p-3">{entry.status==="qualified"?Number(entry.reward_coins).toLocaleString():"�"}</td><td className="p-3">{date(entry.created_at)}</td></tr>)}</tbody></table></div>:<p className="rounded-xl border border-dashed p-6 text-center text-sm text-slate-500">No referrals yet. Share your code to invite a friend.</p>}{Number(referralData.pagination?.totalPages||1)>1&&<div className="mt-3 flex items-center justify-between text-sm"><span>Page {referralPage} of {referralData.pagination.totalPages}</span><div className="flex gap-2"><button type="button" disabled={referralPage<=1||referralPageBusy} onClick={()=>loadReferralPage(referralPage-1)} className="rounded-lg border px-3 py-2 disabled:opacity-40">Previous</button><button type="button" disabled={referralPage>=referralData.pagination.totalPages||referralPageBusy} onClick={()=>loadReferralPage(referralPage+1)} className="rounded-lg border px-3 py-2 disabled:opacity-40">Next</button></div></div>}</>}</section>}
             </div>
-          )}
+          </>}
         </section>
       </main>
       {editing && (
