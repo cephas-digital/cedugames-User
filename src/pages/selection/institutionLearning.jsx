@@ -3,8 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import Navbar from "../../components/navbar";
 import PageLoader from "../../components/PageLoader";
 import InstitutionHistoryTable from "../../components/InstitutionHistoryTable";
+import PriorityAudio from "../../components/PriorityAudio";
 import { apiRequest, assetUrl, cacheWallet } from "../../services/api";
 import {
+  beginPriorityAudio,
+  endPriorityAudio,
   playClickSound,
   playCorrectSound,
   playGameEndSound,
@@ -341,6 +344,7 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
 
   useEffect(() => { isMounted.current = true; void startQuestionRef.current?.(initialQuestionIndex.current); return () => { isMounted.current = false; window.clearTimeout(advanceTimer.current); }; // Start only once, after the learner presses Start practice.
   }, []);
+  useEffect(() => () => stopPrioritySpeech(), [currentQuestionId, session.phase]);
   const attemptExpiresAt = session.attempt?.expiresAt;
   useEffect(() => {
     if (session.phase !== "playing" || !attemptExpiresAt) return undefined;
@@ -353,7 +357,7 @@ function InstitutionPractice({ session, setSession, soundOn, onToggleSound, onCl
     const timer = window.setInterval(tick, 250);
     return () => window.clearInterval(timer);
   }, [session.phase, attemptExpiresAt, patch]);
-  useEffect(() => () => { stopBackgroundMusic(); window.clearTimeout(advanceTimer.current); }, []);
+  useEffect(() => () => { stopPrioritySpeech(); stopBackgroundMusic(); window.clearTimeout(advanceTimer.current); }, []);
 
   if (!currentQuestion) return null;
   const duration = Math.max(5, Math.min(600, Number(currentQuestion.timeLimitSeconds) || 30));
@@ -403,6 +407,8 @@ function structureLabel(label, count) {
 }
 function makeUuid() { return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, char => { const random = Math.floor(Math.random() * 16); return (char === "x" ? random : (random & 3) | 8).toString(16); }); }
 function plainText(html) { const element = document.createElement("div"); element.innerHTML = html || ""; return element.textContent || element.innerText || ""; }
-function speakQuestion(question) { if (!window.speechSynthesis) return; const answers = (question.options || []).map((option, index) => `Option ${String.fromCharCode(65 + index)}: ${plainText(option.text)}`).join(". "); window.speechSynthesis.cancel(); const speech = new SpeechSynthesisUtterance(`${plainText(question.text)}. ${answers}`); speech.rate = 0.9; window.speechSynthesis.speak(speech); }
+let activePrioritySpeech = null;
+function stopPrioritySpeech() { window.speechSynthesis?.cancel(); if (activePrioritySpeech) endPriorityAudio(activePrioritySpeech); activePrioritySpeech = null; }
+function speakQuestion(question) { if (!window.speechSynthesis) return; stopPrioritySpeech(); const source = {}; activePrioritySpeech = source; const answers = (question.options || []).map((option, index) => `Option ${String.fromCharCode(65 + index)}: ${plainText(option.text)}`).join(". "); const speech = new SpeechSynthesisUtterance(`${plainText(question.text)}. ${answers}`); speech.rate = 0.9; const finish = () => { endPriorityAudio(source); if (activePrioritySpeech === source) activePrioritySpeech = null; }; speech.onend = finish; speech.onerror = finish; beginPriorityAudio(source); window.speechSynthesis.speak(speech); }
 function Shape({ type, color = "#7442ae", compact = false }) { const clips = { circle: "circle(50%)", square: "none", rectangle: "none", triangle: "polygon(50% 0,100% 100%,0 100%)", star: "polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 93%,50% 72%,21% 93%,32% 57%,2% 35%,39% 35%)", hexagon: "polygon(25% 7%,75% 7%,100% 50%,75% 93%,25% 93%,0 50%)" }; return <span role="img" aria-label={`${type} shape`} className="my-3 block" style={{ width: compact ? 38 : 60, height: compact ? 38 : 60, backgroundColor: color, clipPath: clips[type] || clips.circle, borderRadius: type === "circle" ? "50%" : 2 }} />; }
-function Media({ url, type }) { const src = assetUrl(url); if (type === "image") return <img className="mt-4 max-h-72 rounded-xl object-contain" src={src} alt="Question or answer attachment" />; if (type === "audio") return <audio className="mt-4 w-full" controls src={src} />; if (type === "video") return <video className="mt-4 max-h-72 rounded-xl" controls src={src} />; return <a className="mt-3 inline-block font-bold text-purple-700 underline" href={src} target="_blank" rel="noreferrer">Open attached document</a>; }
+function Media({ url, type }) { const src = assetUrl(url); if (type === "image") return <img className="mt-4 max-h-72 rounded-xl object-contain" src={src} alt="Question or answer attachment" />; if (type === "audio") return <PriorityAudio className="mt-4 w-full" controls src={src} />; if (type === "video") return <PriorityAudio as="video" className="mt-4 max-h-72 rounded-xl" controls src={src} />; return <a className="mt-3 inline-block font-bold text-purple-700 underline" href={src} target="_blank" rel="noreferrer">Open attached document</a>; }

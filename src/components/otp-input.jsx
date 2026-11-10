@@ -6,15 +6,22 @@ function OTPInput({ otp, setOtp }) {
   const inputs = useRef([]);
 
   const handleChange = (value, index) => {
-    if (!/^[0-9]?$/.test(value)) return;
-
     const newOtp = [...otp];
-    newOtp[index] = value;
+    const digits = value.replace(/\D/g, "").slice(0, 6);
+
+    // Mobile one-time-code autofill can place the entire code into the first
+    // input at once, so distribute multi-digit changes across the six boxes.
+    if (digits.length > 1) {
+      digits.split("").forEach((digit, offset) => {
+        if (index + offset < 6) newOtp[index + offset] = digit;
+      });
+    } else {
+      newOtp[index] = digits;
+    }
     setOtp(newOtp);
 
-    if (value && index < 5) {
-      inputs.current[index + 1].focus();
-    }
+    const nextIndex = digits.length > 1 ? Math.min(index + digits.length, 5) : index + 1;
+    if (digits && nextIndex < 6) inputs.current[nextIndex]?.focus();
   };
 
   const handleKeyDown = (e, index) => {
@@ -40,7 +47,7 @@ function OTPInput({ otp, setOtp }) {
           key={index}
           ref={(el) => (inputs.current[index] = el)}
           value={digit}
-          maxLength={1}
+          maxLength={index === 0 ? 6 : 1}
           type="text"
           inputMode="numeric"
           autoComplete={index === 0 ? "one-time-code" : "off"}

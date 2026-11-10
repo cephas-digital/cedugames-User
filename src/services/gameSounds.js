@@ -7,6 +7,8 @@ import wrongUrl from "../assets/audio/wrong-answer.mp3";
 
 const effects = new Map();
 let backgroundMusic;
+let backgroundMusicRequested = false;
+const priorityAudioSources = new Set();
 
 function sound(url, volume = .7) {
   if (!effects.has(url)) {
@@ -21,23 +23,40 @@ function sound(url, volume = .7) {
 }
 
 export function unlockGameAudio() {
-  if (backgroundMusic?.paused) backgroundMusic.play().catch(() => undefined);
+  if (backgroundMusicRequested && priorityAudioSources.size === 0 && backgroundMusic?.paused) {
+    backgroundMusic.play().catch(() => undefined);
+  }
 }
 
 export function startBackgroundMusic() {
+  backgroundMusicRequested = true;
   if (!backgroundMusic) {
     backgroundMusic = new Audio(backgroundMusicUrl);
     backgroundMusic.loop = true;
     backgroundMusic.preload = "auto";
     backgroundMusic.volume = .18;
   }
-  backgroundMusic.play().catch(() => undefined);
+  if (priorityAudioSources.size === 0) backgroundMusic.play().catch(() => undefined);
 }
 
 export function stopBackgroundMusic() {
+  backgroundMusicRequested = false;
   if (!backgroundMusic) return;
   backgroundMusic.pause();
   backgroundMusic.currentTime = 0;
+}
+
+export function beginPriorityAudio(source) {
+  if (!source || priorityAudioSources.has(source)) return;
+  priorityAudioSources.add(source);
+  backgroundMusic?.pause();
+}
+
+export function endPriorityAudio(source) {
+  if (!source || !priorityAudioSources.delete(source)) return;
+  if (priorityAudioSources.size === 0 && backgroundMusicRequested) {
+    backgroundMusic?.play().catch(() => undefined);
+  }
 }
 
 export function playCorrectSound() { sound(correctUrl); }

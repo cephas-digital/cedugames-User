@@ -1,4 +1,5 @@
 import { assetUrl } from "../services/api";
+import PriorityAudio from "./PriorityAudio";
 
 export default function PracticeReviewQuestion({ question, item, questionNumber }) {
   if (!item) return <article className="rounded-2xl border border-slate-200 p-4">
@@ -37,7 +38,7 @@ function ReviewShape({ type, color = "#7442ae", compact = false }) {
 function ReviewMedia({ url, type }) {
   const src = assetUrl(url);
   if (type === "image") return <img className="mt-4 max-h-72 rounded-xl object-contain" src={src} alt="Question or answer attachment" />;
-  if (type === "audio") return <audio className="mt-4 w-full" controls src={src} />;
-  if (type === "video") return <video className="mt-4 max-h-72 rounded-xl" controls src={src} />;
+  if (type === "audio") return <PriorityAudio className="mt-4 w-full" controls src={src} />;
+  if (type === "video") return <PriorityAudio as="video" className="mt-4 max-h-72 rounded-xl" controls src={src} />;
   return <a className="mt-3 inline-block font-bold text-purple-700 underline" href={src} target="_blank" rel="noreferrer">Open attached document</a>;
 }
