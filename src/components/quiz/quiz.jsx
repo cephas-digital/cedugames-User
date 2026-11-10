@@ -438,7 +438,7 @@ export default function Quiz() {
                 />
               )}
             </div>}
-            {question.isMagic && <p className="mx-auto mt-4 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-bold text-amber-800">✨ {question.magicRewardClaimed ? "You have already claimed this question’s reward." : "Your first answer must be correct to claim this reward."} Help options are unavailable.</p>}
+            {question.isMagic && <p className="mx-auto mt-4 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-bold text-amber-800">{question.magicRewardClaimed ? "You have already claimed this question’s reward." : "Your first answer must be correct to claim this reward."} Help options are unavailable.</p>}
             {actionError && (
               <p className="mx-auto mt-3 max-w-3xl rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">
                 {actionError}
