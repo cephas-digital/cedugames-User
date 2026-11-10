@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthCard from "../../components/autoCard";
 import Bt from "../../assets/bt.png";
@@ -14,8 +14,15 @@ function VerifyCard() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(() => Math.max(0, 60 - Math.floor((Date.now() - Number(state?.sentAt || 0)) / 1000)));
   const email = state?.email || "";
   const purpose = state?.purpose || "register";
+
+  useEffect(() => {
+    if (!resendCooldown) return undefined;
+    const timer = window.setTimeout(() => setResendCooldown((remaining) => Math.max(0, remaining - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
 
   const verify = async () => {
     if (!email) return setError(purpose === "password_reset" ? "Your reset session is missing. Request a new code to continue." : "Your verification session is missing. Please register again.");
@@ -23,7 +30,10 @@ function VerifyCard() {
     try {
       const data = await apiRequest("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email, otp: otp.join(""), purpose }) });
       if (purpose === "register") navigate("/login", { replace: true, state: { message: data.message, returnTo: state?.returnTo } });
-      else if (data.resetToken) navigate("/reset-password", { replace: true, state: { resetToken: data.resetToken } });
+      else if (data.resetToken) {
+        try { window.sessionStorage.setItem("cedu-password-reset-token", data.resetToken); } catch { /* Location state remains available for this navigation. */ }
+        navigate("/reset-password", { replace: true, state: { resetToken: data.resetToken } });
+      }
       else throw new Error("A password reset session could not be created. Please verify the code again.");
     } catch (requestError) { setError(requestError.message); }
     finally { setLoading(false); }
@@ -36,6 +46,7 @@ function VerifyCard() {
       const data = await apiRequest("/auth/resend-otp", { method: "POST", body: JSON.stringify({ email, purpose }) });
       setOtp(["", "", "", "", "", ""]);
       setMessage(data.message);
+      setResendCooldown(60);
     } catch (requestError) { setError(requestError.message); }
     finally { setResending(false); }
   };
@@ -45,12 +56,12 @@ function VerifyCard() {
       <AuthCard><div className="text-center mb-6">
         <div className="flex justify-center mb-4"><BrandLogo className="w-48 sm:w-56" /></div>
         <h1 className="text-2xl sm:text-[32px] font-bold">Verify OTP</h1>
-        <p className="text-gray-500 text-sm mt-2">Enter the 6-digit code sent to {email || "your email"}.</p>
+        <p className="text-gray-500 text-sm mt-2">Enter the six-digit code sent to {email || "your email"}. The code expires in 15 minutes.</p>
         {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
         {message && <p className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{message}</p>}
         <OTPInput otp={otp} setOtp={setOtp} />
         <button onClick={verify} disabled={loading || !email || otp.join("").length !== 6} className="mt-6 w-full rounded-xl bg-[#BF5AF2] px-4 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">{loading ? "Verifying..." : "Verify code"}</button>
-        <button onClick={resend} disabled={loading || resending || !email} className="mt-4 text-sm text-purple-500 disabled:cursor-not-allowed disabled:opacity-50">{resending ? "Sending..." : "Resend code"}</button>
+        <button onClick={resend} disabled={loading || resending || !email || resendCooldown > 0} className="mt-4 text-sm text-purple-500 disabled:cursor-not-allowed disabled:opacity-50">{resending ? "Sending..." : resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend code"}</button>
         {!email && <Link to={purpose === "password_reset" ? "/forgot-password" : "/sign-up"} className="mt-4 inline-block text-sm font-bold text-purple-600">{purpose === "password_reset" ? "Request a new reset code" : "Create an account"}</Link>}
       </div></AuthCard>
     </div>

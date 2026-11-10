@@ -9,10 +9,15 @@ import PasswordStrength from "../../components/passwordStrength";
 import { Button } from "../../components/button";
 import { apiRequest } from "../../services/api";
 
+const getStoredResetToken = () => {
+  try { return window.sessionStorage.getItem("cedu-password-reset-token") || ""; }
+  catch { return ""; }
+};
+
 function ResetPassword() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const resetToken = state?.resetToken;
+  const [resetToken] = useState(() => state?.resetToken || getStoredResetToken());
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -37,6 +42,7 @@ function ResetPassword() {
         headers: { Authorization: `Bearer ${resetToken}` },
         body: JSON.stringify({ newPassword: password }),
       });
+      try { window.sessionStorage.removeItem("cedu-password-reset-token"); } catch { /* The recovery session has been consumed by the server. */ }
       navigate("/login", { replace: true, state: { message: data.message || "Password reset successful. You can now log in." } });
     } catch (requestError) {
       setError(requestError.message);
