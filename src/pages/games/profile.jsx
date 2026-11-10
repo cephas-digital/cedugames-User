@@ -140,6 +140,11 @@ export default function Profile() {
     [referralPageBusy, setReferralPageBusy] = useState(false),
     [referralPage, setReferralPage] = useState(1),
     [form, setForm] = useState({ name: "", username: "", age: "" });
+  const [historyType, setHistoryType] = useState("games");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyData, setHistoryData] = useState({ history: [], pagination: { page: 1, total: 0, totalPages: 0 } });
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState("");
   const load = async () => {
     setLoading(true);
     setError("");
@@ -161,6 +166,16 @@ export default function Profile() {
   useEffect(() => {
     load();
   }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    setHistoryLoading(true);
+    setHistoryError("");
+    apiRequest(`/auth/user/play-history?type=${historyType}&page=${historyPage}&limit=10`, { signal: controller.signal })
+      .then((response) => setHistoryData(response))
+      .catch((requestError) => { if (requestError.name !== "AbortError") setHistoryError(requestError.message || "Unable to load play history."); })
+      .finally(() => { if (!controller.signal.aborted) setHistoryLoading(false); });
+    return () => controller.abort();
+  }, [historyPage, historyType]);
   const user = data?.user,
     performance = user?.performance || {},
     earned = useMemo(
@@ -474,80 +489,17 @@ export default function Profile() {
                 </>}
               </section>}
               <section className="mt-9">
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-black">Badge collection</h2>
-                    <p className="text-sm text-slate-500">
-                      Keep learning to unlock every badge.
-                    </p>
-                  </div>
-                  <span className="text-sm font-bold text-purple-600">
-                    {earned.length}/{data.badges.length}
-                  </span>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div><h2 className="text-lg font-black">Play history</h2><p className="mt-1 text-xs text-slate-500">Browse your CeduGames and CEDU-LEARN activity separately.</p></div>
+                  <span className="text-xs font-semibold text-slate-500">{historyData.pagination.total} {historyType === "games" ? "game" : "learning"} attempt{historyData.pagination.total === 1 ? "" : "s"}</span>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                  {data.badges.map((badge) => (
-                    <article
-                      key={badge.id}
-                      className={`rounded-2xl border p-3 text-center sm:p-4 ${badge.earned ? "border-purple-200 bg-purple-50" : "border-slate-200 bg-slate-50 opacity-60"}`}
-                    >
-                      <img
-                        src={BadgeImage}
-                        alt=""
-                        className={`mx-auto h-12 w-12 ${badge.earned ? "" : "grayscale"}`}
-                      />
-                      <h3 className="mt-2 text-sm font-black">{badge.name}</h3>
-                      <span
-                        className={`mt-2 inline-block rounded-full px-2 py-1 text-[10px] font-bold capitalize ${tierColor[badge.tier]}`}
-                      >
-                        {badge.tier}
-                      </span>
-                      <p className="mt-2 text-xs text-slate-500">
-                        {badge.earned
-                          ? `Earned ${date(badge.earned_at)}`
-                          : `Requires ${Number(badge.criteria_value).toLocaleString()} ${criteriaLabel[badge.criteria_type]}`}
-                      </p>
-                    </article>
-                  ))}
+                <div className="mt-4 inline-flex rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Play history type">
+                  {[{ id: "games", label: "CeduGames" }, { id: "learn", label: "CEDU-LEARN" }].map((tab) => <button key={tab.id} type="button" role="tab" aria-selected={historyType === tab.id} onClick={() => { setHistoryType(tab.id); setHistoryPage(1); }} className={"rounded-lg px-4 py-2 text-sm font-bold transition " + (historyType === tab.id ? "bg-white text-purple-700 shadow-sm" : "text-slate-500 hover:text-slate-800")}>{tab.label}</button>)}
                 </div>
+                {historyLoading ? <div className="mt-4 rounded-2xl border border-slate-200 p-8 text-center text-sm font-semibold text-slate-500">Loading {historyType === "games" ? "CeduGames" : "CEDU-LEARN"} history...</div> : historyError ? <div role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{historyError}</div> : historyData.history.length ? <div className="mt-4 space-y-3">{historyData.history.map((attempt) => <article key={attempt.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-bold text-slate-900">{historyType === "games" ? [attempt.age_group_name, attempt.category_name].filter(Boolean).join(" - ") : attempt.program_name || "CEDU-LEARN"}</p><p className="mt-1 text-sm font-semibold text-slate-700">{historyType === "learn" && attempt.learning_path ? attempt.learning_path + " - " : ""}{attempt.level_name}{attempt.level_number ? " - Level " + attempt.level_number : ""}</p><p className="mt-1 text-xs text-slate-500">{ago(attempt.created_at)} - {attempt.correct_answers}/{attempt.total_questions} correct</p></div><div className="flex items-center justify-between gap-4 sm:justify-end"><span className={"rounded-full px-3 py-1 text-xs font-bold " + (attempt.passed ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-600")}>{attempt.passed ? "Passed" : "Keep trying"}</span><span className="text-lg font-black text-purple-700">{attempt.score_percent}%</span></div></article>)}</div> : <div className="mt-4 rounded-2xl border-2 border-dashed p-10 text-center text-sm text-slate-400">No {historyType === "games" ? "CeduGames" : "CEDU-LEARN"} history yet. Complete a level to see it here.</div>}
+                {historyData.pagination.totalPages > 1 && <div className="mt-4 flex items-center justify-between"><button type="button" onClick={() => setHistoryPage((page) => Math.max(1, page - 1))} disabled={historyPage <= 1 || historyLoading} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 disabled:opacity-40">Previous</button><span className="text-xs font-semibold text-slate-500">Page {historyPage} of {historyData.pagination.totalPages}</span><button type="button" onClick={() => setHistoryPage((page) => Math.min(historyData.pagination.totalPages, page + 1))} disabled={historyPage >= historyData.pagination.totalPages || historyLoading} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 disabled:opacity-40">Next</button></div>}
               </section>
-              <section className="mt-9">
-                <h2 className="text-lg font-black">Recent learning activity</h2>
-                {data.recentAttempts.length ? (
-                  <div className="mt-4 space-y-3">
-                    {data.recentAttempts.map((attempt) => (
-                      <article
-                        key={attempt.id}
-                        className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div>
-                          <p className="font-bold text-slate-900">
-                            {attempt.category_name} · Level{" "}
-                            {attempt.level_number}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {attempt.level_name} · {ago(attempt.created_at)}
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between gap-4 sm:justify-end">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${attempt.passed ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-600"}`}
-                          >
-                            {attempt.passed ? "Passed" : "Keep trying"}
-                          </span>
-                          <span className="text-lg font-black text-purple-700">
-                            {attempt.score_percent}%
-                          </span>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-2xl border-2 border-dashed p-10 text-center text-sm text-slate-400">
-                    Play your first level to start building your activity.
-                  </div>
-                )}
-              </section>
+
             </div>
           )}
         </section>

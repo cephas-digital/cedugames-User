@@ -5,6 +5,7 @@ import { BrandLogo } from "../../components/Brand";
 import Text from "../../components/text";
 import Input from "../../components/input";
 import PasswordInput from "../../components/passwordInput";
+import PasswordStrength from "../../components/passwordStrength";
 import { apiRequest } from "../../services/api";
 
 const initialForm = { name: "", username: "", email: "", phone: "", age: "", password: "", confirmPassword: "", referralCode: "" };
@@ -20,11 +21,12 @@ const Signup = () => {
   useEffect(() => { apiRequest("/referrals/status").then((result) => setReferralsEnabled(Boolean(result.isEnabled))).catch(() => setReferralsEnabled(false)); }, []);
   const update = (event) => setForm({ ...form, [event.target.name]: event.target.value });
   const passwordsMismatch = form.confirmPassword.length > 0 && form.password !== form.confirmPassword;
-  const valid = form.name.trim().length >= 2 && form.username.trim().length >= 3 && form.email.trim() && form.phone.trim().length >= 7 && Number(form.age) >= 1 && Number(form.age) <= 130 && form.password.length >= 8 && form.password === form.confirmPassword;
+  const valid = form.name.trim().length >= 2 && form.username.trim().length >= 3 && form.email.trim() && form.phone.trim().length >= 7 && Number(form.age) >= 1 && Number(form.age) <= 130 && form.password.length >= 8 && form.password.length <= 128 && form.password === form.confirmPassword;
 
   const submit = async (event) => {
     event.preventDefault();
     setError("");
+    if (form.password.length < 8 || form.password.length > 128) return setError("Use a password between 8 and 128 characters.");
     if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
     setLoading(true);
     try {
@@ -61,7 +63,7 @@ const Signup = () => {
               <Input label="Phone number" name="phone" type="tel" inputMode="numeric" value={form.phone} onChange={update} required placeholder="08012345678" />
               <Input label="Age" name="age" type="number" min="1" max="130" value={form.age} onChange={update} required placeholder="10" />
               {referralsEnabled && <Input label="Referral code (optional)" name="referralCode" value={form.referralCode} onChange={(event) => setForm((current) => ({ ...current, referralCode: event.target.value.toUpperCase() }))} placeholder="Enter your friend's code" />}
-              <PasswordInput label="Create password" name="password" value={form.password} onChange={update} minLength={8} placeholder="At least 8 characters" />
+              <div><PasswordInput label="Create password" name="password" value={form.password} onChange={update} minLength={8} placeholder="At least 8 characters" /><PasswordStrength password={form.password} /></div>
               <PasswordInput label="Confirm password" name="confirmPassword" value={form.confirmPassword} onChange={update} minLength={8} placeholder="Repeat password" />
             </div>
             {passwordsMismatch && <p className="-mt-3 mb-5 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-600" role="alert">Passwords do not match. Enter the same password in both fields.</p>}
