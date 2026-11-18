@@ -1,4 +1,13 @@
-const API_URL = (import.meta.env.VITE_API_URL || "https://cedu-api.cephasict.com").replace(/\/+$/, "");
+// Render's learner site is the staging build. Avoid accidentally using the
+// production fallback there, including when Render has that fallback saved as
+// VITE_API_URL. Other explicit API URLs remain configurable per deployment.
+const productionApiUrl = "https://cedu-api.cephasict.com";
+const renderApiUrl = "https://cedugames-backend.onrender.com";
+const configuredApiUrl = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+const isRenderHost = typeof window !== "undefined" && window.location.hostname.endsWith(".onrender.com");
+const API_URL = isRenderHost && (!configuredApiUrl || configuredApiUrl === productionApiUrl)
+  ? renderApiUrl
+  : configuredApiUrl || productionApiUrl;
 export const assetUrl = (value) => value?.startsWith("/") ? `${API_URL}${value}` : value;
 export const TOKEN_KEY = "cedugames_user_token";
 export const USER_KEY = "cedugames_user";

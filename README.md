@@ -35,3 +35,9 @@ docker run --rm -p 8080:80 cedugames
 Then open `http://localhost:8080`. The Nginx configuration includes SPA routing, asset caching, compression, and baseline security headers.
 
 For a static hosting provider, publish `dist` after `npm run build` and configure a rewrite from all unmatched paths to `/index.html`.
+
+Set `VITE_API_URL` explicitly for each deployment when possible. The Render
+learner site (`*.onrender.com`) falls back to
+`https://cedugames-backend.onrender.com`; production domains fall back to
+`https://cedu-api.cephasict.com`. An explicit custom `VITE_API_URL` takes
+priority; the production URL is redirected to the staging API on Render hosts.
