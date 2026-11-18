@@ -36,20 +36,20 @@ export default function ProgramSelection() {
   );
 
   return (
-    <div className="selection-page min-h-screen bg-[#fff9ef]">
+    <div className="selection-page min-h-[100dvh] bg-[#fff9ef]">
       <Navbar />
-      <main className="selection-page__content mx-auto w-full max-w-6xl px-4 py-5 sm:px-5 sm:py-10">
+      <main className="selection-page__content mx-auto flex w-full max-w-6xl flex-col justify-start gap-4 px-4 py-5 sm:gap-6 sm:px-5 sm:py-10">
         <section className="selection-hero rounded-[1.75rem] bg-gradient-to-br from-violet-600 to-fuchsia-500 p-6 text-center text-white shadow-xl sm:rounded-[2rem] sm:p-10">
           <p className="text-xs font-black uppercase tracking-widest sm:text-sm">Choose your learning world</p>
           <h1 className="mx-auto mt-3 max-w-md text-3xl font-black leading-tight sm:max-w-none sm:text-5xl">What would you like to explore?</h1>
         </section>
 
         {loading ? (
-          <PageLoader message="Opening your learning worlds..." cards={2} className="mt-6" />
+          <PageLoader message="Opening your learning worlds..." cards={2} className="mt-0" />
         ) : error ? (
-          <p className="mt-6 text-center text-red-600">{error}</p>
+          <p className="mt-0 text-center text-red-600">{error}</p>
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
+          <div className="mt-0 grid w-full grid-cols-1 content-start gap-4 sm:gap-6 md:grid-cols-2">
             {orderedItems.map((item, index) => (
               <Link
                 key={item.id}
@@ -69,7 +69,7 @@ export default function ProgramSelection() {
           </div>
         )}
 
-        <section className="mt-6">
+        <section className="mt-0 w-full">
           <Link to="/institutions" className="group flex items-center justify-between gap-3 rounded-3xl border border-purple-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-purple-400 hover:shadow-lg sm:gap-4 sm:p-6">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-wider text-purple-600">Learning together</p>

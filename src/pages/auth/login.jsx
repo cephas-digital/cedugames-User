@@ -7,12 +7,28 @@ import Bt from "../../assets/bt.png";
 import { BrandLogo } from "../../components/Brand";
 import { apiRequest, saveSession } from "../../services/api";
 
+const REMEMBERED_LOGIN_KEY = "cedugames_remembered_login";
+
+function readRememberedLogin() {
+  try { return localStorage.getItem(REMEMBERED_LOGIN_KEY) || ""; }
+  catch { return ""; }
+}
+
+function rememberLogin(identifier) {
+  try { localStorage.setItem(REMEMBERED_LOGIN_KEY, identifier.trim()); }
+  catch { /* Keep sign-in working when browser storage is unavailable. */ }
+}
+
+function forgetRememberedLogin() {
+  try { localStorage.removeItem(REMEMBERED_LOGIN_KEY); }
+  catch { /* Keep sign-in working when browser storage is unavailable. */ }
+}
+
 function Login() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const [form, setForm] = useState({ identifier: "", password: "" });
-  // Keep the default login persistent across browser sessions.
-  const [rememberMe, setRememberMe] = useState(true);
+  const [form, setForm] = useState(() => ({ identifier: readRememberedLogin(), password: "" }));
+  const [rememberMe, setRememberMe] = useState(() => Boolean(form.identifier));
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,6 +37,8 @@ function Login() {
     event.preventDefault(); setError(""); setLoading(true);
     try {
       const data = await apiRequest("/auth/login", { method: "POST", body: JSON.stringify({ ...form, rememberMe }) });
+      if (rememberMe) rememberLogin(form.identifier);
+      else forgetRememberedLogin();
       saveSession(data.token, data.user, rememberMe);
       navigate(state?.returnTo || "/profiles", { replace: true });
     } catch (requestError) { setError(requestError.message); }
@@ -34,11 +52,11 @@ function Login() {
         {state?.message && <p className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{state.message}</p>}
         {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
         <div className="flex flex-col gap-4">
-          <Input label="Email or phone number" name="identifier" value={form.identifier} onChange={update} required placeholder="you@example.com or 08012345678" />
+          <Input label="Email or phone number" name="identifier" value={form.identifier} onChange={update} required placeholder="you@example.com or 08012345678" autoComplete={rememberMe ? "username" : "off"} />
           <div className="flex flex-col gap-2 w-full">
             <label htmlFor="password" className="text-sm text-gray-600">Password<span className="ml-1 text-red-500" aria-hidden="true">*</span></label>
             <div className="flex items-center rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] pr-3 focus-within:ring-2 focus-within:ring-purple-400">
-              <input id="password" type={showPassword ? "text" : "password"} name="password" value={form.password} onChange={update} required placeholder="Your password" autoComplete="current-password" className="min-w-0 flex-1 rounded-xl bg-transparent px-4 py-3 outline-none" />
+              <input id="password" type={showPassword ? "text" : "password"} name="password" value={form.password} onChange={update} required placeholder="Your password" autoComplete={rememberMe ? "current-password" : "off"} className="min-w-0 flex-1 rounded-xl bg-transparent px-4 py-3 outline-none" />
               <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"} className="p-1 text-gray-500 hover:text-purple-600">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
                   {showPassword ? <><path d="M3 3l18 18" /><path d="M10.6 10.6a2 2 0 002.8 2.8" /><path d="M9.9 5.2A10.8 10.8 0 0112 5c5 0 8.3 4.3 9 7-.3 1.1-1.1 2.5-2.3 3.7M6.2 6.2C4.4 7.3 3.3 9.3 3 12c.7 2.7 4 7 9 7 1.1 0 2.1-.2 3-.6" /></> : <><path d="M2.5 12s3.4-7 9.5-7 9.5 7 9.5 7-3.4 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></>}
@@ -48,7 +66,7 @@ function Login() {
           </div>
           <div className="flex items-center justify-between gap-3 text-sm">
             <label className="flex cursor-pointer items-center gap-2 font-semibold text-gray-600">
-              <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="h-4 w-4 accent-purple-600" />
+              <input type="checkbox" checked={rememberMe} onChange={(event) => { const checked = event.target.checked; setRememberMe(checked); if (!checked) forgetRememberedLogin(); }} className="h-4 w-4 accent-purple-600" />
               Keep me signed in
             </label>
             <Link to="/forgot-password" className="font-semibold text-[#FFAF42]">Forgot Password?</Link>
