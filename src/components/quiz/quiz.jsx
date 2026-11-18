@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "../homeNavbar";
 import { apiRequest, cacheWallet, isSignedIn } from "../../services/api";
-import BG from "../../assets/BG.png";
+import BG from "../../assets/BG-mobile.jpg";
 import OptionsGrid from "./optionGrid";
 import QuestionCard from "./questionCard";
 import ResultModal from "./resultModal";

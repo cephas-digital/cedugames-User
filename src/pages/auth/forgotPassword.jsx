@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthCard from "../../components/autoCard";
 import Input from "../../components/input";
-import Bt from "../../assets/bt.png";
+import Bt from "../../assets/bt-mobile.jpg";
 import { Button } from "../../components/button";
 import { BrandLogo } from "../../components/Brand";
 import { apiRequest } from "../../services/api";

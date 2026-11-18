@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthCard from "../../components/autoCard";
 import Input from "../../components/input";
 import HeaderText from "../../components/HeaderText";
-import Bt from "../../assets/bt.png";
+import Bt from "../../assets/bt-mobile.jpg";
 import { BrandLogo } from "../../components/Brand";
 import { apiRequest, saveSession } from "../../services/api";
 

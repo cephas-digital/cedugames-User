@@ -100,6 +100,7 @@ export function saveSession(token, user, rememberMe = false) {
   localStorage.setItem(ACCOUNT_KEY, JSON.stringify(user));
   storage.setItem(ACTIVE_PROFILE_KEY, user.id);
   scheduleSessionExpiry(token);
+  window.dispatchEvent(new Event("cedugames:session-updated"));
 }
 export function selectPlayerProfile(profile) {
   const storage = getSessionStorage();
@@ -134,6 +135,7 @@ export function clearSession() {
   sessionStorage.removeItem(ACTIVE_PROFILE_KEY);
   localStorage.removeItem(SELECTIONS_KEY);
   localStorage.removeItem(WALLETS_KEY);
+  window.dispatchEvent(new Event("cedugames:session-updated"));
 }
 export const isSignedIn = () => Boolean(getSessionToken());
 

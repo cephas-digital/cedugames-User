@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import Bt from "../../assets/bt.png";
+import Bt from "../../assets/bt-mobile.jpg";
 import { BrandLogo } from "../../components/Brand";
 import Text from "../../components/text";
 import Input from "../../components/input";

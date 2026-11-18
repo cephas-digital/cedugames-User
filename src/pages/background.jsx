@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isSignedIn } from "../services/api";
 
-import Backgroundpic from "../assets/b.png";
+import Backgroundpic from "../assets/b-mobile.jpg";
 import { BrandLogo } from "../components/Brand";
 
 export default function Background() {

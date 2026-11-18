@@ -1,4 +1,4 @@
-import BG from "../../assets/BG.png";
+import BG from "../../assets/BG-mobile.jpg";
 import Navbar from "../../components/homeNavbar";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";

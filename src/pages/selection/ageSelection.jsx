@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/navbar";
 import { apiRequest, assetUrl } from "../../services/api";
-import kidOne from "../../assets/age-explorer-v2.png";
-import kidTwo from "../../assets/age-adventurer-v2.png";
-import kidThree from "../../assets/age-challenger-v2.png";
+import kidOne from "../../assets/age-explorer-v2.jpg";
+import kidTwo from "../../assets/age-adventurer-v2.jpg";
+import kidThree from "../../assets/age-challenger-v2.jpg";
 
 const kids = [kidOne, kidTwo, kidThree];
 const themes = [

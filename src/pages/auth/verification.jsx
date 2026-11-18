@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthCard from "../../components/autoCard";
-import Bt from "../../assets/bt.png";
+import Bt from "../../assets/bt-mobile.jpg";
 import { BrandLogo } from "../../components/Brand";
 import OTPInput from "../../components/otp-input";
 import { apiRequest } from "../../services/api";
