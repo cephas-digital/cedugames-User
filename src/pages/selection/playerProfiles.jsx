@@ -21,6 +21,7 @@ export default function PlayerProfiles() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", age: "" });
   const [familyContent, setFamilyContent] = useState(null);
+  const [accessPolicy, setAccessPolicy] = useState({ requireChildDeletionOtp: true });
   const [advertOpen, setAdvertOpen] = useState(false);
   const advertSignature = useRef("");
 
@@ -28,7 +29,10 @@ export default function PlayerProfiles() {
     setLoading(true); setError("");
     apiRequest("/auth/user/profiles", { accountContext: true }).then((data) => { setProfiles(data.profiles || []); setChildCount(Number(data.childCount || 0)); }).catch((e) => setError(e.message)).finally(() => setLoading(false));
   };
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+    apiRequest("/auth/access-policy").then((data) => setAccessPolicy(data.policy)).catch(() => undefined);
+  }, []);
   useEffect(() => {
     let active = true;
     const refresh = () => apiRequest("/family-page/content", { accountContext: true }).then((data) => {
@@ -69,6 +73,10 @@ export default function PlayerProfiles() {
   };
   const sendDeleteCode = async () => {
     if (!editing) return;
+    if (!accessPolicy.requireChildDeletionOtp) {
+      if (window.confirm(`Permanently delete ${editing.name}'s profile and all of its learning data?`)) await performDeleteChild();
+      return;
+    }
     setError(""); setDeleteNotice(""); setDeleting(true);
     try {
       const data = await apiRequest(`/auth/user/profiles/${editing.id}/delete-otp`, { method: "POST", body: JSON.stringify({}) });
@@ -80,10 +88,13 @@ export default function PlayerProfiles() {
   };
   const deleteChild = async (event) => {
     event.preventDefault();
+    await performDeleteChild();
+  };
+  const performDeleteChild = async () => {
     if (!editing) return;
     setDeleting(true); setError(""); setDeleteNotice("");
     try {
-      await apiRequest(`/auth/user/profiles/${editing.id}`, { method: "DELETE", body: JSON.stringify({ otp: deleteCode }) });
+      await apiRequest(`/auth/user/profiles/${editing.id}`, { method: "DELETE", body: JSON.stringify(accessPolicy.requireChildDeletionOtp ? { otp: deleteCode } : {}) });
       setProfiles((current) => current.filter((profile) => profile.id !== editing.id));
       setChildCount((value) => Math.max(0, value - 1));
       if (getActiveProfileId() === editing.id) {

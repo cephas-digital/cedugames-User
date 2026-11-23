@@ -35,7 +35,7 @@ const Signup = () => {
         body: JSON.stringify({ name: form.name, username: form.username, email: form.email, phone: form.phone, age: Number(form.age), password: form.password, referralCode: form.referralCode.trim() }),
       });
       if (data.requiresVerification) {
-        navigate("/verification", { state: { email: form.email, purpose: "register", returnTo, sentAt: Date.now() } });
+        navigate("/verification", { state: { email: form.email, purpose: "register", returnTo, sentAt: data.verificationEmailSent ? Date.now() : 0 } });
       } else {
         navigate("/login", { replace: true, state: { message: data.message, email: form.email.trim().toLowerCase(), returnTo } });
       }
