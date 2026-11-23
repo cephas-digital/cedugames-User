@@ -41,11 +41,7 @@ function Login() {
       else forgetRememberedLogin();
       saveSession(data.token, data.user, rememberMe);
       navigate(state?.returnTo || "/profiles", { replace: true });
-    } catch (requestError) {
-      if (requestError.code === "EMAIL_NOT_VERIFIED") {
-        navigate("/verification", { state: { email: requestError.email || form.identifier.trim(), purpose: "register", sentAt: 0, returnTo: state?.returnTo } });
-      } else setError(requestError.message);
-    }
+    } catch (requestError) { setError(requestError.message); }
     finally { setLoading(false); }
   };
   return (
@@ -54,6 +50,7 @@ function Login() {
         <div className="text-center mb-6"><div className="flex justify-center"><BrandLogo className="mb-5 w-48 sm:w-56" /></div><HeaderText>Welcome to Cedu</HeaderText><p className="text-gray-500 text-sm">Cephas Educational Games</p></div>
         <div className="bg-purple-100 text-purple-600 text-sm rounded-lg px-4 py-3 mb-6">Let's get smart and have fun!</div>
         {state?.message && <p className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{state.message}</p>}
+        {state?.email && <Link to="/verification" state={{ email: state.email, purpose: "register", sentAt: 0, returnTo: state?.returnTo }} className="-mt-3 mb-4 block text-center text-sm font-semibold text-purple-700 underline">Verify email (optional)</Link>}
         {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
         <div className="flex flex-col gap-4">
           <Input label="Email or phone number" name="identifier" value={form.identifier} onChange={update} required placeholder="you@example.com or 08012345678" autoComplete={rememberMe ? "username" : "off"} />
