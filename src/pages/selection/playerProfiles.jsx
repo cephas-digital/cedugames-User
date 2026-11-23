@@ -14,6 +14,10 @@ export default function PlayerProfiles() {
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteStep, setDeleteStep] = useState(false);
+  const [deleteCode, setDeleteCode] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState("");
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", age: "" });
   const [familyContent, setFamilyContent] = useState(null);
@@ -49,9 +53,9 @@ export default function PlayerProfiles() {
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", onKeyDown); };
   }, [advertOpen]);
 
-  const openAdd = () => { setEditing(null); setForm({ name: "", age: "" }); setAdding(true); setError(""); };
-  const openEdit = (profile, event) => { event.stopPropagation(); setEditing(profile); setForm({ name: profile.name, age: String(profile.age || "") }); setAdding(true); setError(""); };
-  const close = () => { if (!saving) setAdding(false); };
+  const openAdd = () => { setEditing(null); setForm({ name: "", age: "" }); setAdding(true); setDeleteStep(false); setDeleteCode(""); setDeleteNotice(""); setError(""); };
+  const openEdit = (profile, event) => { event.stopPropagation(); setEditing(profile); setForm({ name: profile.name, age: String(profile.age || "") }); setAdding(true); setDeleteStep(false); setDeleteCode(""); setDeleteNotice(""); setError(""); };
+  const close = () => { if (!saving && !deleting) setAdding(false); };
   const save = async (event) => {
     event.preventDefault(); setSaving(true); setError("");
     try {
@@ -62,6 +66,33 @@ export default function PlayerProfiles() {
       setAdding(false);
     } catch (e) { setError(e.message); }
     finally { setSaving(false); }
+  };
+  const sendDeleteCode = async () => {
+    if (!editing) return;
+    setError(""); setDeleteNotice(""); setDeleting(true);
+    try {
+      const data = await apiRequest(`/auth/user/profiles/${editing.id}/delete-otp`, { method: "POST", body: JSON.stringify({}) });
+      setDeleteStep(true);
+      setDeleteCode("");
+      setDeleteNotice(data.message);
+    } catch (e) { setError(e.message); }
+    finally { setDeleting(false); }
+  };
+  const deleteChild = async (event) => {
+    event.preventDefault();
+    if (!editing) return;
+    setDeleting(true); setError(""); setDeleteNotice("");
+    try {
+      await apiRequest(`/auth/user/profiles/${editing.id}`, { method: "DELETE", body: JSON.stringify({ otp: deleteCode }) });
+      setProfiles((current) => current.filter((profile) => profile.id !== editing.id));
+      setChildCount((value) => Math.max(0, value - 1));
+      if (getActiveProfileId() === editing.id) {
+        const accountProfile = profiles.find((profile) => profile.is_primary);
+        if (accountProfile) selectPlayerProfile(accountProfile);
+      }
+      setAdding(false); setEditing(null); setDeleteStep(false); setDeleteCode("");
+    } catch (e) { setError(e.message); }
+    finally { setDeleting(false); }
   };
   const play = (profile) => { selectPlayerProfile(profile); navigate("/age-selection"); };
 
@@ -83,11 +114,15 @@ export default function PlayerProfiles() {
       {familyContent?.slider?.enabled && familyContent.slider.images?.length > 0 && <FamilySlider images={familyContent.slider.images} />}
     </main>
     {advertOpen && familyContent?.advert?.enabled && familyContent.advert.imageUrl && <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-slate-950/70 p-3 backdrop-blur-sm sm:p-6" onMouseDown={() => setAdvertOpen(false)}><div role="dialog" aria-modal="true" aria-label="Announcement" className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-3xl" onMouseDown={(event) => event.stopPropagation()}><button type="button" onClick={() => setAdvertOpen(false)} aria-label="Close announcement" className="absolute right-2 top-2 z-10 grid h-10 w-10 place-items-center rounded-full bg-slate-950/70 text-2xl leading-none text-white shadow-lg transition hover:bg-slate-950 sm:right-3 sm:top-3">×</button><img src={assetUrl(familyContent.advert.imageUrl)} alt="CeduGames announcement" className="block max-h-[calc(100dvh-1.5rem)] w-full object-contain sm:max-h-[calc(100dvh-3rem)]"/></div></div>}
-    {adding && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm" onMouseDown={close}><form onSubmit={save} onMouseDown={(e) => e.stopPropagation()} className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8"><div className="flex items-start justify-between"><div><p className="text-xs font-black uppercase tracking-widest text-purple-600">Player profile</p><h2 className="mt-1 text-2xl font-black">{editing ? `Update ${editing.name}` : "Add a child"}</h2></div><button type="button" onClick={close} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-xl">×</button></div>
+    {adding && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm" onMouseDown={close}><form onSubmit={deleteStep ? deleteChild : save} onMouseDown={(e) => e.stopPropagation()} className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8"><div className="flex items-start justify-between"><div><p className="text-xs font-black uppercase tracking-widest text-purple-600">Player profile</p><h2 className="mt-1 text-2xl font-black">{editing ? `Update ${editing.name}` : "Add a child"}</h2></div><button type="button" onClick={close} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-xl">×</button></div>
       {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
-      <label className="mt-6 block text-sm font-black text-slate-700">Child's name<input autoFocus required minLength="2" maxLength="120" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100" placeholder="e.g. Ada"/></label>
+      {!deleteStep && <><label className="mt-6 block text-sm font-black text-slate-700">Child's name<input autoFocus required minLength="2" maxLength="120" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100" placeholder="e.g. Ada"/></label>
       <label className="mt-4 block text-sm font-black text-slate-700">Age<input required type="number" min="1" max="25" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100" placeholder="8"/></label>
-      <p className="mt-4 rounded-xl bg-purple-50 p-3 text-xs font-semibold leading-5 text-purple-800">Each child gets separate progress, coins, lives, rewards, badges and leaderboard results under this one family login. The 100-coin welcome bonus is for the account creator; new child profiles start with 0 coins.</p><button disabled={saving} className="mt-6 w-full rounded-xl bg-purple-600 px-5 py-3 font-black text-white shadow-lg hover:bg-purple-700 disabled:opacity-60">{saving ? "Saving…" : editing ? "Save changes" : "Create profile"}</button>
+      <p className="mt-4 rounded-xl bg-purple-50 p-3 text-xs font-semibold leading-5 text-purple-800">Each child gets separate progress, coins, lives, rewards, badges and leaderboard results under this one family login. The 100-coin welcome bonus is for the account creator; new child profiles start with 0 coins.</p></>}
+      {editing && !deleteStep && <button type="button" disabled={saving || deleting} onClick={sendDeleteCode} className="mt-5 w-full rounded-xl border border-red-200 px-5 py-3 font-black text-red-700 hover:bg-red-50 disabled:opacity-60">{deleting ? "Sending code…" : "Delete child profile"}</button>}
+      {editing && deleteStep && <section className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4"><h3 className="font-black text-red-800">Confirm deletion</h3><p className="mt-1 text-sm leading-5 text-red-700">We sent a six-digit code to the email on your parent account. Deleting this profile permanently removes its progress, coins and learning history.</p>{deleteNotice && <p role="status" className="mt-3 text-sm font-bold text-emerald-700">{deleteNotice}</p>}<label className="mt-3 block text-sm font-bold text-slate-700">Email code<input autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required value={deleteCode} onChange={(event) => setDeleteCode(event.target.value.replace(/\D/g, ""))} className="mt-1 w-full rounded-xl border border-red-200 bg-white px-4 py-3 tracking-[.3em] outline-none focus:ring-2 focus:ring-red-200" placeholder="000000"/></label><button type="button" disabled={deleting} onClick={sendDeleteCode} className="mt-2 text-sm font-bold text-red-700 underline disabled:opacity-50">{deleting ? "Sending…" : "Resend code"}</button></section>}
+      {!deleteStep && <button disabled={saving || deleting} className="mt-6 w-full rounded-xl bg-purple-600 px-5 py-3 font-black text-white shadow-lg hover:bg-purple-700 disabled:opacity-60">{saving ? "Saving…" : editing ? "Save changes" : "Create profile"}</button>}
+      {deleteStep && <button disabled={deleting || deleteCode.length !== 6} className="mt-4 w-full rounded-xl bg-red-600 px-5 py-3 font-black text-white shadow-lg hover:bg-red-700 disabled:opacity-60">{deleting ? "Deleting profile…" : "Confirm and delete profile"}</button>}
     </form></div>}
   </div>;
 }
