@@ -82,6 +82,8 @@ export async function apiRequest(path, options = {}) {
       const requestError = new Error(data.errors?.[0]?.message || data.message || "Something went wrong.");
       requestError.code = data.code;
       requestError.email = data.email;
+      requestError.status = response.status;
+      requestError.retryAfterSeconds = data.retryAfterSeconds;
       throw requestError;
     }
     return data;

@@ -22,7 +22,9 @@ function VerifyCard() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(() => Math.max(0, 60 - Math.floor((Date.now() - Number(pendingVerification?.sentAt || 0)) / 1000)));
+  const [now, setNow] = useState(() => Date.now());
+  const [resendAvailableAt, setResendAvailableAt] = useState(() => Number(pendingVerification?.resendAvailableAt) || (Number(pendingVerification?.sentAt || 0) + 60_000));
+  const resendCooldown = Math.max(0, Math.ceil((resendAvailableAt - now) / 1000));
   const email = pendingVerification?.email || "";
   const purpose = pendingVerification?.purpose || "register";
 
@@ -34,9 +36,9 @@ function VerifyCard() {
 
   useEffect(() => {
     if (!resendCooldown) return undefined;
-    const timer = window.setTimeout(() => setResendCooldown((remaining) => Math.max(0, remaining - 1)), 1000);
+    const timer = window.setTimeout(() => setNow(Date.now()), Math.min(1000, resendAvailableAt - now));
     return () => window.clearTimeout(timer);
-  }, [resendCooldown]);
+  }, [resendCooldown, resendAvailableAt, now]);
 
   const verify = async () => {
     if (!email) return setError(purpose === "password_reset" ? "Your reset session is missing. Request a new code to continue." : "Your verification session is missing. Please register again.");
@@ -64,10 +66,23 @@ function VerifyCard() {
       const data = await apiRequest("/auth/resend-otp", { method: "POST", body: JSON.stringify({ email, purpose }) });
       setOtp(["", "", "", "", "", ""]);
       setMessage(data.message);
-      setResendCooldown(60);
-      try { window.sessionStorage.setItem(VERIFICATION_SESSION_KEY, JSON.stringify({ ...pendingVerification, sentAt: Date.now() })); }
+      const sentAt = Date.now();
+      const nextResendAvailableAt = sentAt + (Number(data.resendAfterSeconds) || 60) * 1000;
+      setNow(sentAt);
+      setResendAvailableAt(nextResendAvailableAt);
+      try { window.sessionStorage.setItem(VERIFICATION_SESSION_KEY, JSON.stringify({ ...pendingVerification, sentAt, resendAvailableAt: nextResendAvailableAt })); }
       catch { /* The backend still enforces the resend cooldown. */ }
-    } catch (requestError) { setError(requestError.message); }
+    } catch (requestError) {
+      setError(requestError.message);
+      if (requestError.status === 429) {
+        const retrySeconds = Math.max(1, Number(requestError.retryAfterSeconds) || 60);
+        const nextResendAvailableAt = Date.now() + retrySeconds * 1000;
+        setNow(Date.now());
+        setResendAvailableAt(nextResendAvailableAt);
+        try { window.sessionStorage.setItem(VERIFICATION_SESSION_KEY, JSON.stringify({ ...pendingVerification, resendAvailableAt: nextResendAvailableAt })); }
+        catch { /* The backend remains authoritative if browser storage is unavailable. */ }
+      }
+    }
     finally { setResending(false); }
   };
 
