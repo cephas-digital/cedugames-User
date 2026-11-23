@@ -35,7 +35,14 @@ const Signup = () => {
         body: JSON.stringify({ name: form.name, username: form.username, email: form.email, phone: form.phone, age: Number(form.age), password: form.password, referralCode: form.referralCode.trim() }),
       });
       if (data.requiresVerification) {
-        navigate("/verification", { state: { email: form.email, purpose: "register", returnTo, sentAt: data.verificationEmailSent ? Date.now() : 0 } });
+        navigate("/verification", { state: {
+          email: form.email,
+          purpose: "register",
+          returnTo,
+          sentAt: data.verificationEmailSent ? Date.now() : 0,
+          initialMessage: data.verificationEmailSent ? "A verification code was sent. Check your inbox and spam folder." : undefined,
+          initialError: data.verificationEmailSent ? undefined : "The verification code could not be sent. Use Resend code to try again.",
+        } });
       } else {
         navigate("/login", { replace: true, state: { message: data.message, email: form.email.trim().toLowerCase(), returnTo } });
       }

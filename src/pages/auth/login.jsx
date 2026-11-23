@@ -43,7 +43,30 @@ function Login() {
       navigate(state?.returnTo || "/profiles", { replace: true });
     } catch (requestError) {
       if (requestError.code === "EMAIL_NOT_VERIFIED") {
-        navigate("/verification", { state: { email: requestError.email || form.identifier.trim(), purpose: "register", sentAt: 0, returnTo: state?.returnTo } });
+        const email = requestError.email || form.identifier.trim();
+        const verificationState = { email, purpose: "register", sentAt: 0, returnTo: state?.returnTo };
+        try {
+          const result = await apiRequest("/auth/resend-otp", {
+            method: "POST",
+            body: JSON.stringify({ email, purpose: "register" }),
+          });
+          const sentAt = Date.now();
+          navigate("/verification", { state: {
+            ...verificationState,
+            sentAt,
+            resendAvailableAt: sentAt + (Number(result.resendAfterSeconds) || 60) * 1000,
+            initialMessage: result.message,
+          } });
+        } catch (sendError) {
+          const cooldown = sendError.status === 429
+            ? Math.max(1, Number(sendError.retryAfterSeconds) || 60)
+            : 0;
+          navigate("/verification", { state: {
+            ...verificationState,
+            resendAvailableAt: cooldown ? Date.now() + cooldown * 1000 : undefined,
+            initialError: sendError.message,
+          } });
+        }
       } else setError(requestError.message);
     }
     finally { setLoading(false); }

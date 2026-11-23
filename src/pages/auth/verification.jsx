@@ -18,8 +18,8 @@ function VerifyCard() {
   const { state } = useLocation();
   const pendingVerification = useMemo(() => state?.email ? state : readVerificationSession(), [state]);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState(() => pendingVerification?.initialError || "");
+  const [message, setMessage] = useState(() => pendingVerification?.initialMessage || "");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [now, setNow] = useState(() => Date.now());
