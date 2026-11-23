@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthCard from "../../components/autoCard";
 import Bt from "../../assets/bt-mobile.jpg";
@@ -6,17 +6,31 @@ import { BrandLogo } from "../../components/Brand";
 import OTPInput from "../../components/otp-input";
 import { apiRequest } from "../../services/api";
 
+const VERIFICATION_SESSION_KEY = "cedugames_pending_verification";
+
+function readVerificationSession() {
+  try { return JSON.parse(window.sessionStorage.getItem(VERIFICATION_SESSION_KEY) || "null"); }
+  catch { return null; }
+}
+
 function VerifyCard() {
   const navigate = useNavigate();
   const { state } = useLocation();
+  const pendingVerification = useMemo(() => state?.email ? state : readVerificationSession(), [state]);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(() => Math.max(0, 60 - Math.floor((Date.now() - Number(state?.sentAt || 0)) / 1000)));
-  const email = state?.email || "";
-  const purpose = state?.purpose || "register";
+  const [resendCooldown, setResendCooldown] = useState(() => Math.max(0, 60 - Math.floor((Date.now() - Number(pendingVerification?.sentAt || 0)) / 1000)));
+  const email = pendingVerification?.email || "";
+  const purpose = pendingVerification?.purpose || "register";
+
+  useEffect(() => {
+    if (!pendingVerification?.email) return;
+    try { window.sessionStorage.setItem(VERIFICATION_SESSION_KEY, JSON.stringify(pendingVerification)); }
+    catch { /* Keep OTP verification usable when browser storage is unavailable. */ }
+  }, [pendingVerification]);
 
   useEffect(() => {
     if (!resendCooldown) return undefined;
@@ -29,9 +43,13 @@ function VerifyCard() {
     setLoading(true); setError("");
     try {
       const data = await apiRequest("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email, otp: otp.join(""), purpose }) });
-      if (purpose === "register") navigate("/login", { replace: true, state: { message: data.message, returnTo: state?.returnTo } });
+      if (purpose === "register") {
+        try { window.sessionStorage.removeItem(VERIFICATION_SESSION_KEY); } catch { /* The verified account remains usable if storage is unavailable. */ }
+        navigate("/login", { replace: true, state: { message: data.message, returnTo: pendingVerification?.returnTo } });
+      }
       else if (data.resetToken) {
         try { window.sessionStorage.setItem("cedu-password-reset-token", data.resetToken); } catch { /* Location state remains available for this navigation. */ }
+        try { window.sessionStorage.removeItem(VERIFICATION_SESSION_KEY); } catch { /* Reset flow can continue from router state. */ }
         navigate("/reset-password", { replace: true, state: { resetToken: data.resetToken } });
       }
       else throw new Error("A password reset session could not be created. Please verify the code again.");
@@ -47,6 +65,8 @@ function VerifyCard() {
       setOtp(["", "", "", "", "", ""]);
       setMessage(data.message);
       setResendCooldown(60);
+      try { window.sessionStorage.setItem(VERIFICATION_SESSION_KEY, JSON.stringify({ ...pendingVerification, sentAt: Date.now() })); }
+      catch { /* The backend still enforces the resend cooldown. */ }
     } catch (requestError) { setError(requestError.message); }
     finally { setResending(false); }
   };

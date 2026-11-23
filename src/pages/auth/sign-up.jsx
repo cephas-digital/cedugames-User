@@ -54,7 +54,7 @@ const Signup = () => {
         <div className="flex items-center rounded-b-2xl md:rounded-r-2xl md:rounded-bl-none justify-center bg-gray-50 p-5 sm:p-8 md:py-12">
           <form className="w-full max-w-md" onSubmit={submit}>
             <h2 className="text-2xl font-semibold mb-2">Create an account to get started</h2>
-            <p className="text-gray-500 mb-6">Fill in your details to join the community.</p>
+            <p className="text-gray-500 mb-6">Fill in your details to join the community. You’ll need to verify your email before you can use the app.</p>
             {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <Input label="Full name" name="name" value={form.name} onChange={update} required placeholder="Jane Doe" />

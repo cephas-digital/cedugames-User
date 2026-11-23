@@ -41,7 +41,11 @@ function Login() {
       else forgetRememberedLogin();
       saveSession(data.token, data.user, rememberMe);
       navigate(state?.returnTo || "/profiles", { replace: true });
-    } catch (requestError) { setError(requestError.message); }
+    } catch (requestError) {
+      if (requestError.code === "EMAIL_NOT_VERIFIED") {
+        navigate("/verification", { state: { email: requestError.email || form.identifier.trim(), purpose: "register", sentAt: 0, returnTo: state?.returnTo } });
+      } else setError(requestError.message);
+    }
     finally { setLoading(false); }
   };
   return (

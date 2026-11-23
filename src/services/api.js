@@ -78,7 +78,12 @@ export async function apiRequest(path, options = {}) {
     // Any unauthorized response means the bearer session is no longer usable
     // (expired, revoked, or invalid). Clear it immediately and return to login.
     if (response.status === 401 && token) returnToLogin();
-    if (!response.ok) throw new Error(data.errors?.[0]?.message || data.message || "Something went wrong.");
+    if (!response.ok) {
+      const requestError = new Error(data.errors?.[0]?.message || data.message || "Something went wrong.");
+      requestError.code = data.code;
+      requestError.email = data.email;
+      throw requestError;
+    }
     return data;
   } catch (error) {
     if (timedOut) throw new Error("The server took too long to respond. Please try again.");
